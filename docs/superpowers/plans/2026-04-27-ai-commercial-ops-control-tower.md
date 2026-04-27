@@ -102,7 +102,7 @@ Create or modify these areas:
 - Create: `README.md`
 - Modify: `package.json`
 
-- [ ] **Step 1: Create `.gitignore`**
+- [x] **Step 1: Create `.gitignore`**
 
 Add:
 
@@ -122,7 +122,7 @@ __pycache__/
 venv/
 ```
 
-- [ ] **Step 2: Create `.env.example`**
+- [x] **Step 2: Create `.env.example`**
 
 Add:
 
@@ -144,7 +144,7 @@ Rules:
 - Slack workflows use `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID`.
 - No `.env` file or secret value is committed.
 
-- [ ] **Step 3: Update `README.md` with project positioning**
+- [x] **Step 3: Update `README.md` with project positioning**
 
 Add:
 
@@ -179,7 +179,7 @@ A portfolio-grade operating layer for small businesses that turns sales, costs, 
 - Secrets are never committed.
 ```
 
-- [ ] **Step 4: Update `package.json` scripts**
+- [x] **Step 4: Update `package.json` scripts**
 
 Keep existing dependencies and add scripts:
 
@@ -200,7 +200,7 @@ Keep existing dependencies and add scripts:
 
 If Next.js dependencies are not installed yet, install them in Task 3.
 
-- [ ] **Step 5: Verify baseline files**
+- [x] **Step 5: Verify baseline files**
 
 Run:
 
@@ -210,7 +210,7 @@ git status --short
 
 Expected: new README, `.gitignore`, and `.env.example`, existing n8n files still present.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -231,7 +231,7 @@ git commit -m "chore: add project baseline"
 - Create: `supabase/seed/targets.csv`
 - Create: `supabase/seed/seed.sql`
 
-- [ ] **Step 1: Write database migration**
+- [x] **Step 1: Write database migration**
 
 Create `supabase/migrations/001_initial_schema.sql` with tables from the design spec:
 
@@ -444,7 +444,7 @@ create policy "demo read recommended actions" on recommended_actions for select 
 create policy "demo read action log" on action_log for select using (true);
 ```
 
-- [ ] **Step 2: Create demo CSVs**
+- [x] **Step 2: Create demo CSVs**
 
 Create enough rows to demonstrate:
 
@@ -466,11 +466,11 @@ Expected demo risks:
 | `deal_slippage` | `high` | `Wholesale Expansion` is open and past expected close date. |
 | `expense_pressure` | `medium` | Latest expense growth exceeds latest revenue growth. |
 
-- [ ] **Step 3: Create `supabase/seed/seed.sql`**
+- [x] **Step 3: Create `supabase/seed/seed.sql`**
 
 Seed data with explicit `copy` commands or insert statements matching the CSVs.
 
-- [ ] **Step 4: Verify SQL parses locally**
+- [x] **Step 4: Verify SQL parses locally**
 
 Run:
 
@@ -480,7 +480,7 @@ Get-Content .\supabase\migrations\001_initial_schema.sql | Select-String "create
 
 Expected: all core table names appear.
 
-- [ ] **Step 5: Verify expected demo outputs are represented**
+- [x] **Step 5: Verify expected demo outputs are represented**
 
 Run:
 
@@ -490,7 +490,7 @@ Select-String -Path .\supabase\seed\*.csv -Pattern "SKU-003|Wholesale Expansion"
 
 Expected: `SKU-003` appears in `capacity.csv`, and `Wholesale Expansion` appears in `pipeline.csv`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -514,7 +514,7 @@ git commit -m "feat: add commercial ops schema and demo data"
 - Create: `lib/formatting/dates.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Install frontend dependencies**
+- [x] **Step 1: Install frontend dependencies**
 
 Run:
 
@@ -524,11 +524,11 @@ npm install next react react-dom typescript @types/react @types/node tailwindcss
 
 Expected: dependencies are added to `package.json` and `package-lock.json`.
 
-- [ ] **Step 2: Initialize config files**
+- [x] **Step 2: Initialize config files**
 
 Create `tsconfig.json`, `next.config.ts`, `postcss.config.js`, and `tailwind.config.ts` using standard Next.js TypeScript configuration.
 
-- [ ] **Step 3: Create app shell**
+- [x] **Step 3: Create app shell**
 
 Create `components/layout/AppShell.tsx` with navigation for:
 
@@ -541,11 +541,11 @@ Data Health
 
 Use compact navigation and restrained styling.
 
-- [ ] **Step 4: Create dashboard route stubs**
+- [x] **Step 4: Create dashboard route stubs**
 
 Create four MVP pages with page titles and empty-state content. Pipeline, Costs & Margin, and Capacity are sections within Forecasts & Risks for MVP, not separate routes.
 
-- [ ] **Step 5: Verify build**
+- [x] **Step 5: Verify build**
 
 Run:
 
@@ -556,7 +556,7 @@ npm run build
 
 Expected: both commands pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -576,7 +576,7 @@ git commit -m "feat: add dashboard foundation"
 - Create: `components/kpi/KpiTile.tsx`
 - Modify: `app/dashboard/page.tsx`
 
-- [ ] **Step 1: Define metric types**
+- [x] **Step 1: Define metric types**
 
 Create types for KPI tiles, metric snapshots, forecasts, risk events, AI reports, recommended actions, and import health.
 
@@ -596,13 +596,13 @@ Use these metric formulas across dashboard transforms, workflows, and forecastin
 | `capacity_cover_days` | `quantity_on_hand / average_daily_units`, treated as unlimited when average daily units are `0`. |
 | `cash_pressure_score` | `expense_growth - revenue_growth`, normalized to `0-100`. |
 
-- [ ] **Step 2: Create Supabase client**
+- [x] **Step 2: Create Supabase client**
 
 Read `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from environment variables. Throw a clear error when missing.
 
 The dashboard client must never read `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_URL`.
 
-- [ ] **Step 3: Create query functions**
+- [x] **Step 3: Create query functions**
 
 Implement:
 
@@ -614,15 +614,15 @@ getRecommendedActions()
 getLatestImports()
 ```
 
-- [ ] **Step 4: Create KPI tile**
+- [x] **Step 4: Create KPI tile**
 
 Build a compact `KpiTile` component with label, value, delta, and state.
 
-- [ ] **Step 5: Wire Overview page**
+- [x] **Step 5: Wire Overview page**
 
 Show KPI tiles, an empty AI summary state that reads "No weekly report generated yet", an empty risk feed state that reads "No open risks", and an empty actions state that reads "No recommended actions".
 
-- [ ] **Step 6: Run verification**
+- [x] **Step 6: Run verification**
 
 Run:
 
@@ -633,7 +633,7 @@ npm run build
 
 Expected: both pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 

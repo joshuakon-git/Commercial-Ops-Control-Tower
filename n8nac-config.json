@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "activeInstanceId": "instance-81e884f5",
+  "instances": [
+    {
+      "id": "instance-81e884f5",
+      "name": "localhost · Joshua Kon",
+      "host": "http://localhost:5678",
+      "syncFolder": "workflows",
+      "projectId": "personal",
+      "projectName": "Personal",
+      "instanceIdentifier": "local_5678_joshua_k",
+      "workflowDir": "workflows/local_5678_joshua_k/personal",
+      "verification": {
+        "status": "verified",
+        "normalizedHost": "http://localhost:5678",
+        "userId": "d119b59a-0152-491f-a353-4bb22335ace7",
+        "userName": "Joshua Kon",
+        "userEmail": "apexofcheese@gmail.com",
+        "lastCheckedAt": "2026-04-27T12:35:47.341Z"
+      }
+    }
+  ],
+  "host": "http://localhost:5678",
+  "syncFolder": "workflows",
+  "projectId": "personal",
+  "projectName": "Personal",
+  "instanceIdentifier": "local_5678_joshua_k",
+  "workflowDir": "workflows/local_5678_joshua_k/personal"
+}
