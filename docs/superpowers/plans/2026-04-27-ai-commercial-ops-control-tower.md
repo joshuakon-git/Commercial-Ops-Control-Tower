@@ -47,10 +47,7 @@ Create or modify these areas:
     layout.tsx
     page.tsx
     dashboard/page.tsx
-    forecasts/page.tsx
-    pipeline/page.tsx
-    costs-margin/page.tsx
-    capacity/page.tsx
+    forecasts-risks/page.tsx
     actions/page.tsx
     data-health/page.tsx
 
@@ -72,7 +69,7 @@ Create or modify these areas:
   supabase/
     migrations/001_initial_schema.sql
     seed/sales_orders.csv
-    seed/inventory.csv
+    seed/capacity.csv
     seed/pipeline.csv
     seed/expenses.csv
     seed/targets.csv
@@ -101,6 +98,7 @@ Create or modify these areas:
 **Files:**
 
 - Create: `.gitignore`
+- Create: `.env.example`
 - Create: `README.md`
 - Modify: `package.json`
 
@@ -124,7 +122,29 @@ __pycache__/
 venv/
 ```
 
-- [ ] **Step 2: Update `README.md` with project positioning**
+- [ ] **Step 2: Create `.env.example`**
+
+Add:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+SLACK_BOT_TOKEN=
+SLACK_CHANNEL_ID=
+DATABASE_URL=
+```
+
+Rules:
+
+- Browser dashboard code uses only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- n8n workflows and server-side scripts use `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_URL` for privileged writes.
+- OpenAI workflows use `OPENAI_API_KEY`.
+- Slack workflows use `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID`.
+- No `.env` file or secret value is committed.
+
+- [ ] **Step 3: Update `README.md` with project positioning**
 
 Add:
 
@@ -140,7 +160,7 @@ A portfolio-grade operating layer for small businesses that turns sales, costs, 
 - n8n-as-code automation workflows
 - Explainable forecasting and risk rules
 - AI weekly ops summary
-- Next.js operator dashboard
+- Next.js operator dashboard with four polished views
 
 ## Operating Loop
 
@@ -150,9 +170,16 @@ A portfolio-grade operating layer for small businesses that turns sales, costs, 
 4. Detect risks.
 5. Generate AI summaries.
 6. Trigger recommended actions and alerts.
+
+## Security
+
+- Dashboard reads safe demo data through the Supabase anon key.
+- Workflows and server scripts use service role or database credentials.
+- Supabase RLS is enabled in the schema.
+- Secrets are never committed.
 ```
 
-- [ ] **Step 3: Update `package.json` scripts**
+- [ ] **Step 4: Update `package.json` scripts**
 
 Keep existing dependencies and add scripts:
 
@@ -173,7 +200,7 @@ Keep existing dependencies and add scripts:
 
 If Next.js dependencies are not installed yet, install them in Task 3.
 
-- [ ] **Step 4: Verify baseline files**
+- [ ] **Step 5: Verify baseline files**
 
 Run:
 
@@ -181,14 +208,14 @@ Run:
 git status --short
 ```
 
-Expected: new README and `.gitignore`, existing n8n files still present.
+Expected: new README, `.gitignore`, and `.env.example`, existing n8n files still present.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 Run:
 
 ```powershell
-git add .gitignore README.md package.json
+git add .gitignore .env.example README.md package.json
 git commit -m "chore: add project baseline"
 ```
 
@@ -198,7 +225,7 @@ git commit -m "chore: add project baseline"
 
 - Create: `supabase/migrations/001_initial_schema.sql`
 - Create: `supabase/seed/sales_orders.csv`
-- Create: `supabase/seed/inventory.csv`
+- Create: `supabase/seed/capacity.csv`
 - Create: `supabase/seed/pipeline.csv`
 - Create: `supabase/seed/expenses.csv`
 - Create: `supabase/seed/targets.csv`
@@ -240,13 +267,14 @@ create table if not exists sales_orders (
   created_at timestamptz not null default now()
 );
 
-create table if not exists inventory_positions (
+create table if not exists capacity_positions (
   id uuid primary key default gen_random_uuid(),
   raw_upload_id uuid references raw_uploads(id) on delete set null,
-  sku text not null,
-  stock_on_hand integer not null check (stock_on_hand >= 0),
+  resource_code text not null,
+  resource_name text not null,
+  quantity_on_hand integer not null check (quantity_on_hand >= 0),
   reorder_point integer not null check (reorder_point >= 0),
-  supplier_lead_time_days integer not null check (supplier_lead_time_days >= 0),
+  lead_time_days integer not null check (lead_time_days >= 0),
   unit_cost numeric(12,2) not null default 0,
   created_at timestamptz not null default now()
 );
@@ -290,6 +318,8 @@ create table if not exists targets (
 create table if not exists metric_snapshots (
   id uuid primary key default gen_random_uuid(),
   snapshot_date date not null,
+  period_start date not null,
+  period_end date not null,
   period text not null,
   revenue numeric(12,2) not null default 0,
   gross_margin numeric(12,2) not null default 0,
@@ -302,7 +332,8 @@ create table if not exists metric_snapshots (
   pipeline_coverage numeric(5,2) not null default 0,
   stock_risk_count integer not null default 0,
   cash_pressure_score numeric(5,2) not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (period_end >= period_start)
 );
 
 create table if not exists forecasts (
@@ -324,6 +355,7 @@ create table if not exists risk_events (
   risk_type text not null,
   severity text not null check (severity in ('low', 'medium', 'high')),
   status text not null default 'open' check (status in ('open', 'acknowledged', 'resolved')),
+  dedupe_key text not null,
   metric_name text,
   metric_value numeric(12,2),
   threshold_value numeric(12,2),
@@ -333,6 +365,7 @@ create table if not exists risk_events (
   source_table text,
   source_record_id uuid,
   detected_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   resolved_at timestamptz
 );
 
@@ -362,6 +395,7 @@ create table if not exists recommended_actions (
   status text not null default 'open' check (status in ('open', 'in_progress', 'done', 'dismissed')),
   due_date date,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   completed_at timestamptz
 );
 
@@ -380,7 +414,34 @@ create index if not exists idx_expenses_expense_date on expenses(expense_date);
 create index if not exists idx_crm_pipeline_expected_close on crm_pipeline(expected_close_date);
 create index if not exists idx_metric_snapshots_date on metric_snapshots(snapshot_date);
 create index if not exists idx_risk_events_status on risk_events(status);
+create unique index if not exists idx_risk_events_open_dedupe on risk_events(dedupe_key) where status in ('open', 'acknowledged');
 create index if not exists idx_recommended_actions_status on recommended_actions(status);
+
+alter table raw_uploads enable row level security;
+alter table sales_orders enable row level security;
+alter table capacity_positions enable row level security;
+alter table crm_pipeline enable row level security;
+alter table expenses enable row level security;
+alter table targets enable row level security;
+alter table metric_snapshots enable row level security;
+alter table forecasts enable row level security;
+alter table risk_events enable row level security;
+alter table ai_reports enable row level security;
+alter table recommended_actions enable row level security;
+alter table action_log enable row level security;
+
+create policy "demo read raw uploads" on raw_uploads for select using (true);
+create policy "demo read sales orders" on sales_orders for select using (true);
+create policy "demo read capacity positions" on capacity_positions for select using (true);
+create policy "demo read crm pipeline" on crm_pipeline for select using (true);
+create policy "demo read expenses" on expenses for select using (true);
+create policy "demo read targets" on targets for select using (true);
+create policy "demo read metric snapshots" on metric_snapshots for select using (true);
+create policy "demo read forecasts" on forecasts for select using (true);
+create policy "demo read risk events" on risk_events for select using (true);
+create policy "demo read ai reports" on ai_reports for select using (true);
+create policy "demo read recommended actions" on recommended_actions for select using (true);
+create policy "demo read action log" on action_log for select using (true);
 ```
 
 - [ ] **Step 2: Create demo CSVs**
@@ -389,11 +450,21 @@ Create enough rows to demonstrate:
 
 - Revenue pacing below target.
 - One margin drop.
-- One slipping deal.
-- One stockout/capacity risk.
+- One slipping deal named `Wholesale Expansion`.
+- One stockout/capacity risk for `SKU-003`.
 - Expenses rising faster than revenue.
 
 Use dates around the current month and the previous four weeks.
+
+Expected demo risks:
+
+| Risk type | Expected severity | Required source condition |
+| --- | --- | --- |
+| `revenue_pacing` | `high` | Current month revenue projects more than 10% below target. |
+| `margin_drop` | `medium` | Latest gross margin percentage is at least 5 percentage points below the previous comparable period. |
+| `stockout_risk` | `high` | `SKU-003` projects to run out inside `lead_time_days`. |
+| `deal_slippage` | `high` | `Wholesale Expansion` is open and past expected close date. |
+| `expense_pressure` | `medium` | Latest expense growth exceeds latest revenue growth. |
 
 - [ ] **Step 3: Create `supabase/seed/seed.sql`**
 
@@ -409,7 +480,17 @@ Get-Content .\supabase\migrations\001_initial_schema.sql | Select-String "create
 
 Expected: all core table names appear.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Verify expected demo outputs are represented**
+
+Run:
+
+```powershell
+Select-String -Path .\supabase\seed\*.csv -Pattern "SKU-003|Wholesale Expansion"
+```
+
+Expected: `SKU-003` appears in `capacity.csv`, and `Wholesale Expansion` appears in `pipeline.csv`.
+
+- [ ] **Step 6: Commit**
 
 Run:
 
@@ -425,6 +506,9 @@ git commit -m "feat: add commercial ops schema and demo data"
 - Create: `app/layout.tsx`
 - Create: `app/page.tsx`
 - Create: `app/dashboard/page.tsx`
+- Create: `app/forecasts-risks/page.tsx`
+- Create: `app/actions/page.tsx`
+- Create: `app/data-health/page.tsx`
 - Create: `components/layout/AppShell.tsx`
 - Create: `lib/formatting/currency.ts`
 - Create: `lib/formatting/dates.ts`
@@ -450,10 +534,7 @@ Create `components/layout/AppShell.tsx` with navigation for:
 
 ```text
 Overview
-Forecasts
-Pipeline
-Costs & Margin
-Capacity
+Forecasts & Risks
 Actions
 Data Health
 ```
@@ -462,7 +543,7 @@ Use compact navigation and restrained styling.
 
 - [ ] **Step 4: Create dashboard route stubs**
 
-Create pages for all dashboard views with page titles and empty-state content.
+Create four MVP pages with page titles and empty-state content. Pipeline, Costs & Margin, and Capacity are sections within Forecasts & Risks for MVP, not separate routes.
 
 - [ ] **Step 5: Verify build**
 
@@ -499,9 +580,27 @@ git commit -m "feat: add dashboard foundation"
 
 Create types for KPI tiles, metric snapshots, forecasts, risk events, AI reports, recommended actions, and import health.
 
+Use these metric formulas across dashboard transforms, workflows, and forecasting tests:
+
+| Metric | Formula |
+| --- | --- |
+| `revenue` | `sum(sales_orders.revenue)` for the selected period. |
+| `gross_margin` | `sum(sales_orders.gross_margin)`. |
+| `gross_margin_pct` | `gross_margin / revenue`, stored as `0` when revenue is `0`. |
+| `operating_costs` | `sum(expenses.amount)` for the selected period. |
+| `net_contribution` | `gross_margin - operating_costs`. |
+| `average_order_value` | `revenue / order_count`, stored as `0` when order count is `0`. |
+| `sales_velocity` | `units sold / active selling days`. |
+| `weighted_pipeline` | `sum(crm_pipeline.value * crm_pipeline.probability)` for open deals. |
+| `pipeline_coverage` | `weighted_pipeline / next_period_revenue_target`, stored as `0` when target is `0`. |
+| `capacity_cover_days` | `quantity_on_hand / average_daily_units`, treated as unlimited when average daily units are `0`. |
+| `cash_pressure_score` | `expense_growth - revenue_growth`, normalized to `0-100`. |
+
 - [ ] **Step 2: Create Supabase client**
 
 Read `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from environment variables. Throw a clear error when missing.
+
+The dashboard client must never read `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_URL`.
 
 - [ ] **Step 3: Create query functions**
 
@@ -582,7 +681,7 @@ forecast_revenue(weekly_revenue: list[float]) -> dict
 detect_revenue_pacing(projected: float, target: float) -> dict | None
 detect_margin_drop(current_pct: float, previous_pct: float) -> dict | None
 detect_expense_pressure(revenue_growth: float, expense_growth: float) -> dict | None
-detect_stockout(stock_on_hand: int, weekly_units: float, lead_time_days: int) -> dict | None
+detect_stockout(quantity_on_hand: int, weekly_units: float, lead_time_days: int) -> dict | None
 detect_deal_slippage(expected_close_date: str, status: str, value: float) -> dict | None
 ```
 
@@ -645,6 +744,8 @@ Webhook or Manual Trigger -> Validate Payload -> Clean Rows -> Write Supabase/Po
 ```
 
 Use Code nodes only for validation and row normalization that cannot be expressed cleanly with Set nodes.
+
+The workflow must have a manual/demo execution path so the portfolio demo does not depend on an external upload event.
 
 - [ ] **Step 5: Validate locally**
 
@@ -731,7 +832,7 @@ Run `node-info` for chosen Schedule, Postgres/Supabase, and Code nodes.
 Create:
 
 ```text
-Schedule -> Query Clean Tables -> Calculate KPI Snapshot -> Insert metric_snapshots -> Log Result
+Manual/Schedule Trigger -> Query Clean Tables -> Calculate KPI Snapshot -> Insert metric_snapshots -> Log Result
 ```
 
 Metrics must include revenue, gross margin, gross margin percentage, operating costs, net contribution, average order value, sales velocity, weighted pipeline, pipeline coverage, stock risk count, and cash pressure score.
@@ -786,10 +887,11 @@ npx --yes n8nac skills search "code"
 Create:
 
 ```text
-Schedule -> Load Recent Metrics/Targets/Pipeline/Inventory -> Forecast -> Risk Rules -> Upsert risk_events -> Insert forecasts
+Manual/Schedule Trigger -> Load Recent Metrics/Targets/Pipeline/Capacity -> Forecast -> Risk Rules -> Upsert risk_events -> Insert forecasts
 ```
 
 Avoid duplicate open risks for the same `risk_type`, `source_table`, and `source_record_id`.
+Use `risk_events.dedupe_key` with format `<risk_type>:<source_table>:<source_record_id-or-period>` and update open risks with the same key instead of inserting duplicates.
 
 - [ ] **Step 4: Validate, push, verify**
 
@@ -846,12 +948,28 @@ The prompt builder must send:
 
 Do not send raw operational tables.
 
+The OpenAI response must be valid JSON matching:
+
+```json
+{
+  "summary": "...",
+  "what_changed": "...",
+  "needs_attention": "...",
+  "likely_causes": "...",
+  "recommended_actions": "...",
+  "next_7_days_priorities": "...",
+  "slack_text": "..."
+}
+```
+
+Validate all fields before inserting into `ai_reports`. If the response is invalid, write an `action_log` entry and fail the workflow instead of inserting malformed data.
+
 - [ ] **Step 4: Build workflow**
 
 Create:
 
 ```text
-Monday Schedule -> Pull Structured Payload -> OpenAI Summary -> Save ai_reports -> Send Slack -> Write action_log
+Manual/Monday Schedule -> Pull Structured Payload -> OpenAI JSON Summary -> Validate JSON -> Save ai_reports -> Send Slack -> Write action_log
 ```
 
 - [ ] **Step 5: Validate, push, verify**
@@ -899,10 +1017,11 @@ npx --yes n8nac skills search "if"
 Create:
 
 ```text
-Schedule -> Query New High Risks -> Classify -> Insert recommended_actions -> Slack Alert -> action_log
+Manual/Schedule Trigger -> Query New High Risks -> Classify -> Insert recommended_actions -> Slack Alert -> action_log
 ```
 
 Use a scheduled poll for MVP instead of a database trigger.
+Resolving a risk must not automatically resolve linked actions in MVP. Actions keep their own lifecycle: `open -> in_progress -> done` or `open -> dismissed`.
 
 - [ ] **Step 3: Validate, push, verify**
 
@@ -950,12 +1069,19 @@ Render title, priority, owner, due date, status, and linked risk.
 Map pages:
 
 - Overview: KPIs, AI summary, urgent risks, recent actions.
-- Forecasts: forecast chart and pacing notes.
-- Pipeline: weighted pipeline and slipping deals.
-- Costs & Margin: margin trend and expense pressure.
-- Capacity: cover risk table.
+- Forecasts & Risks: forecast chart, pacing notes, weighted pipeline, slipping deals, margin trend, expense pressure, and capacity cover risks.
 - Actions: action table.
 - Data Health: import history and stale data warnings.
+
+Early UI work may use static mock objects to unblock component development. Final demo mode must read from Supabase.
+
+Data Health must flag:
+
+- No successful import in the last 7 days.
+- No metric snapshot in the last 48 hours.
+- Latest workflow run failed.
+- Required source table has zero rows.
+- Latest AI report is older than 8 days.
 
 - [ ] **Step 5: Verify responsive layout**
 
@@ -1010,6 +1136,13 @@ Include:
 - [ ] **Step 2: Write architecture doc**
 
 Summarize data flow, database tables, workflows, forecasting/risk rules, and dashboard views.
+Include deployment posture:
+
+- Dashboard: Vercel.
+- Database: hosted Supabase project for seeded demo data.
+- n8n: local/self-hosted demo, or hosted n8n if available.
+- Screenshots/video: captured after seeded demo run.
+- Public demo exposes only safe demo data through the anon key.
 
 - [ ] **Step 3: Update README**
 
@@ -1019,6 +1152,7 @@ Add:
 - Screenshot section with labeled slots for Overview, Forecasts, Risks, and Actions; each slot should state which screenshot to capture after the dashboard is running.
 - Setup instructions.
 - Demo instructions.
+- Deployment instructions.
 - Portfolio positioning.
 - Phase-two roadmap.
 
@@ -1053,6 +1187,8 @@ git commit -m "docs: add demo and architecture guide"
 ## Risk Register
 
 - Supabase credentials may not be available during early local development. Use demo/static fallbacks for dashboard skeleton only, but do not fake final workflow verification.
+- Dashboard code must use only the Supabase anon key. Service role credentials and `DATABASE_URL` are restricted to n8n workflows and server-side scripts.
+- RLS must be enabled even for the demo schema so the public portfolio posture is clear.
 - n8n workflow nodes must not be guessed. Always inspect n8nac schema before writing node config.
 - OpenAI and Slack credentials may produce Class A gaps. Treat them as configuration tasks, not code failures.
 - Forecasting should remain explainable. Avoid introducing heavy ML until the deterministic version is complete.
@@ -1066,6 +1202,9 @@ The MVP is done when:
 - n8n workflows exist as version-controlled TypeScript files.
 - Workflows validate locally and verify live after push.
 - Metrics, forecasts, risks, AI reports, actions, and import health are visible in the dashboard.
+- Seeded data deterministically produces the expected demo risks: `revenue_pacing`, `margin_drop`, `stockout_risk` for `SKU-003`, `deal_slippage` for `Wholesale Expansion`, and `expense_pressure`.
+- AI reports are stored only after JSON schema validation.
+- Public dashboard access uses the anon key and RLS-protected demo data.
 - The dashboard builds successfully.
 - The forecasting tests pass.
 - README and demo script can guide a reviewer through the operating loop.

@@ -27,6 +27,8 @@ Version one includes:
 - OpenAI-generated weekly summary from structured metrics and risks.
 - Slack/email-ready notification path, with Slack first.
 - Action queue and action log.
+- Environment/config contract for dashboard, workflows, and server-side scripts.
+- Supabase RLS posture suitable for safe demo data.
 
 Version one excludes:
 
@@ -77,6 +79,40 @@ Next.js Dashboard
 - Forecasting: Python script/service using Pandas-style time-series calculations in version one.
 - Notifications: Slack first, email second.
 
+## Environment and Config Contract
+
+Create `.env.example` with:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+SLACK_BOT_TOKEN=
+SLACK_CHANNEL_ID=
+DATABASE_URL=
+```
+
+Key usage:
+
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are used by the browser dashboard for read-only demo data access.
+- `SUPABASE_SERVICE_ROLE_KEY` is used only by n8n workflows or server-side scripts that need privileged writes. It must never be exposed to the browser.
+- `DATABASE_URL` is used only by server-side scripts, migrations, local utilities, or n8n nodes that connect directly to Postgres.
+- `OPENAI_API_KEY` is used by AI report generation workflows or server-side AI utilities.
+- `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_ID` are used by notification workflows.
+- No `.env` file or secret value is committed to git.
+
+## Security Posture
+
+This is a portfolio project, but the domain still touches commercial and financial data.
+
+- MVP can run with local/demo access and seeded non-sensitive data.
+- Supabase Row Level Security must be enabled on application tables.
+- Browser/dashboard reads use the anon key and should only expose safe demo data.
+- n8n workflows and server-side scripts use service role credentials or `DATABASE_URL` for writes.
+- Service role keys are never used in client-side code.
+- Public portfolio screenshots and demo videos should use seeded demo records, not real business data.
+
 ## Repository Layout
 
 ```text
@@ -87,10 +123,7 @@ Next.js Dashboard
 
   app/
     dashboard/
-    forecasts/
-    pipeline/
-    costs-margin/
-    capacity/
+    forecasts-risks/
     actions/
     data-health/
 
@@ -136,10 +169,20 @@ The active n8n-as-code workflow directory is `workflows/local_5678_joshua_k/pers
 Version one uses seeded CSVs or equivalent seed records:
 
 - `sales_orders.csv`: `order_date`, `customer`, `product`, `sku`, `units`, `revenue`, `discount`, `channel`, `unit_cost`.
-- `inventory.csv`: `sku`, `stock_on_hand`, `reorder_point`, `supplier_lead_time_days`, `unit_cost`.
+- `capacity.csv`: `resource_code`, `resource_name`, `quantity_on_hand`, `reorder_point`, `lead_time_days`, `unit_cost`.
 - `pipeline.csv`: `deal_name`, `stage`, `value`, `probability`, `expected_close_date`, `owner`.
 - `expenses.csv`: `expense_date`, `category`, `supplier`, `amount`, `fixed_or_variable`.
 - `targets.csv`: `period_start`, `period_end`, `revenue_target`, `gross_margin_target`, `pipeline_coverage_target`.
+
+Expected demo risks:
+
+| Risk type | Expected severity | Source |
+| --- | --- | --- |
+| `revenue_pacing` | `high` | Current month revenue projects more than 10% below target. |
+| `margin_drop` | `medium` | Latest gross margin percentage is at least 5 percentage points below the previous comparable period. |
+| `stockout_risk` | `high` | `SKU-003` / capacity resource projects to run out inside lead time. |
+| `deal_slippage` | `high` | `Wholesale Expansion` is open and past expected close date. |
+| `expense_pressure` | `medium` | Expense growth exceeds revenue growth across the latest period. |
 
 ## Database Design
 
@@ -180,18 +223,19 @@ Fields:
 - `gross_margin`
 - `created_at`
 
-### `inventory_positions`
+### `capacity_positions`
 
-Current stock or generic capacity state.
+Current stock or generic capacity state. The UI should describe this as capacity unless a data source is explicitly retail/inventory-specific.
 
 Fields:
 
 - `id`
 - `raw_upload_id`
-- `sku`
-- `stock_on_hand`
+- `resource_code`
+- `resource_name`
+- `quantity_on_hand`
 - `reorder_point`
-- `supplier_lead_time_days`
+- `lead_time_days`
 - `unit_cost`
 - `created_at`
 
@@ -250,6 +294,8 @@ Fields:
 
 - `id`
 - `snapshot_date`
+- `period_start`
+- `period_end`
 - `period`
 - `revenue`
 - `gross_margin`
@@ -292,6 +338,7 @@ Fields:
 - `risk_type`
 - `severity`
 - `status`
+- `dedupe_key`
 - `metric_name`
 - `metric_value`
 - `threshold_value`
@@ -301,6 +348,7 @@ Fields:
 - `source_table`
 - `source_record_id`
 - `detected_at`
+- `updated_at`
 - `resolved_at`
 
 ### `ai_reports`
@@ -338,6 +386,7 @@ Fields:
 - `status`
 - `due_date`
 - `created_at`
+- `updated_at`
 - `completed_at`
 
 ### `action_log`
@@ -370,6 +419,22 @@ Version one calculates:
 - Forecast versus actual.
 - Cash pressure proxy.
 
+Metric definitions:
+
+| Metric | Formula |
+| --- | --- |
+| `revenue` | `sum(sales_orders.revenue)` for the selected period. |
+| `gross_margin` | `sum(sales_orders.gross_margin)`. |
+| `gross_margin_pct` | `gross_margin / revenue`, stored as `0` when revenue is `0`. |
+| `operating_costs` | `sum(expenses.amount)` for the selected period. |
+| `net_contribution` | `gross_margin - operating_costs`. |
+| `average_order_value` | `revenue / order_count`, stored as `0` when order count is `0`. |
+| `sales_velocity` | `units sold / active selling days`. |
+| `weighted_pipeline` | `sum(crm_pipeline.value * crm_pipeline.probability)` for open deals. |
+| `pipeline_coverage` | `weighted_pipeline / next_period_revenue_target`, stored as `0` when target is `0`. |
+| `capacity_cover_days` | `quantity_on_hand / average_daily_units`, treated as unlimited when average daily units are `0`. |
+| `cash_pressure_score` | `expense_growth - revenue_growth`, normalized to `0-100`. |
+
 ## Forecasting
 
 Version one uses intentionally explainable forecasting:
@@ -396,6 +461,27 @@ Version one detects:
 
 Each risk event must include severity, explanation, recommended action, status, timestamp, and a link to the source metric or record where possible.
 
+Risk lifecycle:
+
+```text
+open -> acknowledged -> resolved
+```
+
+Recommended action lifecycle:
+
+```text
+open -> in_progress -> done
+open -> dismissed
+```
+
+Resolving a risk does not automatically resolve linked actions in the MVP. Risks and actions remain independent but linked, because an action can still need follow-up after the original risk is resolved.
+
+Risk deduplication:
+
+- `risk_events.dedupe_key` should be unique for active/open risk identity.
+- Recommended format: `<risk_type>:<source_table>:<source_record_id-or-period>`.
+- Forecast/risk workflows update existing open risks with the same dedupe key instead of creating duplicates.
+
 ## AI Summary Design
 
 The AI summary receives structured metrics, forecasts, and risk events. It does not receive raw messy tables.
@@ -414,11 +500,27 @@ Required sections:
 4. Recommended actions.
 5. Next 7 days priorities.
 
-The workflow saves both structured report fields and a Slack/email-ready version.
+The AI response must be valid JSON matching:
+
+```json
+{
+  "summary": "...",
+  "what_changed": "...",
+  "needs_attention": "...",
+  "likely_causes": "...",
+  "recommended_actions": "...",
+  "next_7_days_priorities": "...",
+  "slack_text": "..."
+}
+```
+
+The workflow validates this schema before inserting into `ai_reports`. If the model returns invalid JSON or missing fields, the workflow should create an action log entry and fail as a wiring/configuration issue rather than inserting malformed report data.
 
 ## n8n Workflow Design
 
 All workflows must be created under `workflows/local_5678_joshua_k/personal`.
+
+Every MVP workflow should be manually runnable for demos even when it also has a schedule. Portfolio demos must not depend on waiting for a daily trigger or Monday report time.
 
 Before creating or editing any workflow:
 
@@ -453,7 +555,7 @@ Responsibilities:
 Pattern:
 
 ```text
-Schedule -> Query Supabase -> Calculate Metrics -> Write metric_snapshots -> Flag Missing Data
+Manual/Schedule Trigger -> Query Supabase -> Calculate Metrics -> Write metric_snapshots -> Flag Missing Data
 ```
 
 Responsibilities:
@@ -469,7 +571,7 @@ Responsibilities:
 Pattern:
 
 ```text
-Schedule -> Load Metrics -> Run Forecast -> Compare Thresholds -> Create risk_events
+Manual/Schedule Trigger -> Load Metrics -> Run Forecast -> Compare Thresholds -> Create risk_events
 ```
 
 Responsibilities:
@@ -485,7 +587,7 @@ Responsibilities:
 Pattern:
 
 ```text
-Monday Schedule -> Pull KPIs/Risks -> Build Structured Prompt -> OpenAI Summary -> Save ai_report -> Send Slack/Email
+Manual/Monday Schedule -> Pull KPIs/Risks -> Build Structured Prompt -> OpenAI JSON Summary -> Validate JSON -> Save ai_report -> Send Slack/Email
 ```
 
 Responsibilities:
@@ -502,7 +604,7 @@ Responsibilities:
 Pattern:
 
 ```text
-New High-Severity Risk -> Classify Severity -> Create Recommended Action -> Notify -> Write action_log
+Manual/Scheduled Poll -> New High-Severity Risk -> Classify Severity -> Create Recommended Action -> Notify -> Write action_log
 ```
 
 Responsibilities:
@@ -516,6 +618,17 @@ Responsibilities:
 
 The dashboard should feel like an operator cockpit: dense, calm, and built for repeated use. It should not feel like a landing page.
 
+MVP uses four polished pages first:
+
+- Overview.
+- Forecasts & Risks.
+- Actions.
+- Data Health.
+
+Pipeline, costs/margin, and capacity are sections within these pages for MVP. They can become separate pages in phase 1.1 after the four core views are populated and polished.
+
+Dashboard pages should support empty states and may use static mock objects during initial UI development, but final demo mode must read from Supabase.
+
 ### Overview
 
 - KPI tiles: revenue this month, gross margin, projected month-end revenue, risk count, pipeline coverage, cash pressure.
@@ -523,29 +636,20 @@ The dashboard should feel like an operator cockpit: dense, calm, and built for r
 - Urgent risk feed.
 - Recent recommended actions.
 
-### Forecasts
+### Forecasts & Risks
 
 - Revenue forecast versus actuals.
 - Month-end projection.
 - Target pacing.
 - Forecast confidence notes.
-
-### Pipeline
-
 - Weighted pipeline.
 - Coverage gap.
 - Deals expected this period.
 - Slipping deals.
-
-### Costs & Margin
-
 - Gross margin trend.
 - Operating cost trend.
 - Expense pressure alerts.
 - Net contribution.
-
-### Capacity / Inventory
-
 - Stock or capacity cover.
 - Reorder suggestions.
 - Stockout/capacity risks.
@@ -564,6 +668,14 @@ The dashboard should feel like an operator cockpit: dense, calm, and built for r
 - Failed imports.
 - Missing required fields.
 - Last successful workflow timestamps.
+
+Concrete data health rules:
+
+- No successful import in the last 7 days.
+- No metric snapshot in the last 48 hours.
+- Latest workflow run failed.
+- Required source table has zero rows.
+- Latest AI report is older than 8 days.
 
 ## Error Handling
 
@@ -591,6 +703,7 @@ Testing should prove the system loop works:
 - Forecast/risk rules produce deterministic outputs from demo data.
 - AI prompt builder sends structured data, not raw tables.
 - Dashboard renders empty, loading, populated, and error states.
+- Final dashboard demo mode reads from Supabase, even if static mocks were used during early UI development.
 - n8n workflow files validate locally and verify after push.
 - Webhook/chat/form workflows use `test-plan`, activation, and production tests after push.
 
@@ -601,15 +714,24 @@ The final project should include:
 - README with positioning, screenshots, architecture diagram, and demo script.
 - Supabase schema and seed data.
 - n8n workflows as TypeScript files.
-- Dashboard with seven operational views.
+- Dashboard with four polished MVP views: Overview, Forecasts & Risks, Actions, and Data Health.
 - Example AI weekly report.
 - Example risk events and recommended actions.
 - Short phase-two roadmap for live connectors and CRM task creation.
+
+## Deployment and Portfolio Hosting
+
+- Dashboard: Vercel.
+- Database: hosted Supabase project for public demo data.
+- n8n: local/self-hosted demo, or hosted n8n if available.
+- Screenshots/video: captured after seeded demo run, showing the populated dashboard, risks, AI report, and action queue.
+- Public demo must not require secret values in the browser beyond the Supabase anon key.
 
 ## Phase Two
 
 After MVP:
 
+- Separate Pipeline, Costs & Margin, and Capacity pages once the four MVP pages are polished.
 - Google Sheets sync.
 - Stripe or Shopify ingestion.
 - Pipedrive/HubSpot task creation.
