@@ -917,7 +917,7 @@ git commit -m "feat: add forecast and risk workflow"
 
 - Create: `workflows/local_5678_joshua_k/personal/weekly-ai-report.workflow.ts`
 
-- [ ] **Step 1: Research OpenAI and Slack nodes**
+- [x] **Step 1: Research OpenAI and Slack nodes**
 
 Run:
 
@@ -929,11 +929,11 @@ npx --yes n8nac skills search "postgres"
 npx --yes n8nac skills search "schedule trigger"
 ```
 
-- [ ] **Step 2: Inspect schemas**
+- [x] **Step 2: Inspect schemas**
 
 Run `node-info` for selected OpenAI, Slack, Schedule, Postgres, and Code nodes.
 
-- [ ] **Step 3: Build prompt payload**
+- [x] **Step 3: Build prompt payload**
 
 The prompt builder must send:
 
@@ -964,7 +964,7 @@ The OpenAI response must be valid JSON matching:
 
 Validate all fields before inserting into `ai_reports`. If the response is invalid, write an `action_log` entry and fail the workflow instead of inserting malformed data.
 
-- [ ] **Step 4: Build workflow**
+- [x] **Step 4: Build workflow**
 
 Create:
 
@@ -972,7 +972,7 @@ Create:
 Manual/Monday Schedule -> Pull Structured Payload -> OpenAI JSON Summary -> Validate JSON -> Save ai_reports -> Send Slack -> Write action_log
 ```
 
-- [ ] **Step 5: Validate, push, verify**
+- [x] **Step 5: Validate, push, verify**
 
 Run:
 
@@ -981,11 +981,11 @@ npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/weekly-ai
 npx --yes n8nac push workflows/local_5678_joshua_k/personal/weekly-ai-report.workflow.ts --verify
 ```
 
-- [ ] **Step 6: Handle Class A gaps**
+- [x] **Step 6: Handle Class A gaps**
 
 If OpenAI or Slack credentials are missing, do not rewrite workflow code. Document the missing credential type and continue.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 
