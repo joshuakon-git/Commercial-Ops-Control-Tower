@@ -4,6 +4,11 @@
       "lastSyncedHash": "57f2f80510edfd137d7834fbd3b591590a14152a64a672d7fef437f0c4a2f8eb",
       "lastSyncedAt": "2026-04-27T17:23:35.756Z",
       "filename": "ingestion.workflow.ts"
+    },
+    "W4ZVf4l9JtpNhbH1": {
+      "lastSyncedHash": "d47355237ba5aee11032db5d7b09a76ca23c622b0abfbc38526aa42d6fa680f9",
+      "lastSyncedAt": "2026-04-27T17:34:39.122Z",
+      "filename": "daily-metrics.workflow.ts"
     }
   }
 }
