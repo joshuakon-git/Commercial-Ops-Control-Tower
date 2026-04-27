@@ -9,6 +9,11 @@
       "lastSyncedHash": "d47355237ba5aee11032db5d7b09a76ca23c622b0abfbc38526aa42d6fa680f9",
       "lastSyncedAt": "2026-04-27T17:34:39.122Z",
       "filename": "daily-metrics.workflow.ts"
+    },
+    "cQtgLAXrNmvbcbVX": {
+      "lastSyncedHash": "c6d3e84a07ca0fb14e83d606dd337d64c33ed42d6e29bbb199bf9143713c7c5a",
+      "lastSyncedAt": "2026-04-27T21:05:51.000Z",
+      "filename": "forecast-risk.workflow.ts"
     }
   }
 }
