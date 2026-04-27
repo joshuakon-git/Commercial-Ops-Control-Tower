@@ -862,7 +862,7 @@ git commit -m "feat: add daily metrics workflow"
 - Create: `workflows/local_5678_joshua_k/personal/forecast-risk.workflow.ts`
 - Modify: `services/forecasting/forecast.py` if CLI wrapper is needed
 
-- [ ] **Step 1: Decide execution method**
+- [x] **Step 1: Decide execution method**
 
 Choose one:
 
@@ -871,7 +871,7 @@ Choose one:
 
 Recommendation for MVP: use n8n Code node with logic equivalent to the tested Python functions, and keep Python as the documented reference implementation.
 
-- [ ] **Step 2: Research nodes**
+- [x] **Step 2: Research nodes**
 
 Run:
 
@@ -882,7 +882,7 @@ npx --yes n8nac skills search "postgres"
 npx --yes n8nac skills search "code"
 ```
 
-- [ ] **Step 3: Build workflow**
+- [x] **Step 3: Build workflow**
 
 Create:
 
@@ -893,7 +893,7 @@ Manual/Schedule Trigger -> Load Recent Metrics/Targets/Pipeline/Capacity -> Fore
 Avoid duplicate open risks for the same `risk_type`, `source_table`, and `source_record_id`.
 Use `risk_events.dedupe_key` with format `<risk_type>:<source_table>:<source_record_id-or-period>` and update open risks with the same key instead of inserting duplicates.
 
-- [ ] **Step 4: Validate, push, verify**
+- [x] **Step 4: Validate, push, verify**
 
 Run:
 
@@ -902,7 +902,7 @@ npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/forecast-
 npx --yes n8nac push workflows/local_5678_joshua_k/personal/forecast-risk.workflow.ts --verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
