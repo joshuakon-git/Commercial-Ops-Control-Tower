@@ -1,0 +1,5 @@
+deal_name,stage,value,probability,expected_close_date,owner,status
+Wholesale Expansion,Proposal,28000.00,0.70,2026-04-20,Maya Chen,open
+North Region Pilot,Discovery,16000.00,0.35,2026-05-08,Amir Patel,open
+Retainer Renewal,Negotiation,12000.00,0.80,2026-05-15,Maya Chen,open
+Legacy Account Recovery,Closed Lost,9000.00,0.00,2026-04-12,Jordan Lee,lost

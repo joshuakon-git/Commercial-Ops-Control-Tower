@@ -1,0 +1,13 @@
+order_date,customer,product,sku,units,revenue,discount,channel,unit_cost
+2026-03-23,Apex Cafe,Starter Pack,SKU-001,20,3200.00,0.00,direct,70.00
+2026-03-25,Beacon Retail,Core Bundle,SKU-002,15,4500.00,150.00,partner,160.00
+2026-03-27,Heritage Market,Signal Kit,SKU-003,18,5400.00,0.00,direct,170.00
+2026-04-01,Apex Cafe,Starter Pack,SKU-001,18,2880.00,0.00,direct,72.00
+2026-04-03,City Dental,Implementation Sprint,SKU-004,10,5200.00,250.00,direct,260.00
+2026-04-08,Beacon Retail,Core Bundle,SKU-002,10,3000.00,100.00,partner,165.00
+2026-04-10,Heritage Market,Signal Kit,SKU-003,16,4800.00,0.00,direct,175.00
+2026-04-15,City Dental,Implementation Sprint,SKU-004,7,3640.00,0.00,direct,270.00
+2026-04-17,Apex Cafe,Starter Pack,SKU-001,12,1920.00,0.00,direct,75.00
+2026-04-22,Heritage Market,Signal Kit,SKU-003,22,6600.00,400.00,direct,240.00
+2026-04-24,Beacon Retail,Core Bundle,SKU-002,6,1800.00,200.00,partner,190.00
+2026-04-27,Apex Cafe,Starter Pack,SKU-001,8,1280.00,0.00,direct,90.00

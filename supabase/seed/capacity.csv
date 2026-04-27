@@ -1,0 +1,5 @@
+resource_code,resource_name,quantity_on_hand,reorder_point,lead_time_days,unit_cost
+SKU-001,Starter Pack Capacity,120,40,7,75.00
+SKU-002,Core Bundle Capacity,42,30,10,170.00
+SKU-003,Signal Kit Capacity,8,25,14,220.00
+SKU-004,Implementation Sprint Capacity,28,12,5,260.00
