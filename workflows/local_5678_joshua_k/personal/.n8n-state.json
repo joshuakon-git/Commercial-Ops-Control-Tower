@@ -14,6 +14,11 @@
       "lastSyncedHash": "c6d3e84a07ca0fb14e83d606dd337d64c33ed42d6e29bbb199bf9143713c7c5a",
       "lastSyncedAt": "2026-04-27T21:05:51.000Z",
       "filename": "forecast-risk.workflow.ts"
+    },
+    "NwsCx9dJMP1uOYOc": {
+      "lastSyncedHash": "b1c0cad525dfb3bee500893c23bbe213f5cdd85775d10210ec358243d1e06afb",
+      "lastSyncedAt": "2026-04-27T21:19:39.788Z",
+      "filename": "weekly-ai-report.workflow.ts"
     }
   }
 }
