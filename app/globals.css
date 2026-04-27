@@ -285,6 +285,47 @@ select {
   border-right: 0;
 }
 
+.kpi-tile {
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.kpi-tile:hover {
+  background: #f8faf6;
+}
+
+.kpi-tile[data-state="warning"] {
+  background: #fffaf0;
+}
+
+.kpi-tile[data-state="danger"] {
+  background: #fff7f5;
+}
+
+.kpi-tile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpi-state {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.kpi-delta {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .metric-label {
   color: var(--muted);
   font-size: 13px;
@@ -348,6 +389,14 @@ select {
 .tag.warning {
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+.empty-panel.compact {
+  min-height: 72px;
+}
+
+.stacked-list {
+  margin-top: 12px;
 }
 
 @keyframes page-enter {

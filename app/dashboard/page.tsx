@@ -1,14 +1,26 @@
-import { formatCurrency } from "@/lib/formatting/currency";
+import { KpiTile } from "@/components/kpi/KpiTile";
 import { formatShortDate } from "@/lib/formatting/dates";
+import { buildKpiTiles } from "@/lib/metrics/transforms";
+import {
+  getLatestAiReport,
+  getLatestImports,
+  getLatestMetricSnapshot,
+  getOpenRiskEvents,
+  getRecommendedActions,
+} from "@/lib/supabase/queries";
 
-const placeholderMetrics = [
-  { label: "Revenue MTD", value: formatCurrency(31120) },
-  { label: "Gross margin", value: "36.2%" },
-  { label: "Open risks", value: "0" },
-  { label: "Last import", value: formatShortDate("2026-04-27") },
-];
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [snapshot, riskEvents, aiReport, recommendedActions, latestImports] = await Promise.all([
+    getLatestMetricSnapshot(),
+    getOpenRiskEvents(),
+    getLatestAiReport(),
+    getRecommendedActions(),
+    getLatestImports(),
+  ]);
+  const kpiTiles = buildKpiTiles(snapshot, latestImports);
+
   return (
     <>
       <header className="page-header">
@@ -23,16 +35,13 @@ export default function DashboardPage() {
         <div className="section-heading">
           <div>
             <h2>Selected KPIs</h2>
-            <p>Seeded data is ready; live metric snapshots arrive in Task 4.</p>
+            <p>Latest metric snapshot and import freshness from Supabase.</p>
           </div>
-          <span className="tag">Foundation</span>
+          <span className="tag">{snapshot ? formatShortDate(snapshot.snapshotDate) : "No snapshot"}</span>
         </div>
         <div className="metric-row">
-          {placeholderMetrics.map((metric) => (
-            <div className="metric-cell" key={metric.label}>
-              <span className="metric-label">{metric.label}</span>
-              <strong className="metric-value">{metric.value}</strong>
-            </div>
+          {kpiTiles.map((metric) => (
+            <KpiTile key={metric.label} {...metric} />
           ))}
         </div>
       </section>
@@ -45,23 +54,61 @@ export default function DashboardPage() {
               <p>Weekly report output will appear here after the report workflow runs.</p>
             </div>
           </div>
-          <div className="empty-panel">
-            <strong>No weekly report generated yet</strong>
-            <span>Task 9 will populate this area from validated AI report records.</span>
-          </div>
+          {aiReport ? (
+            <div className="status-list">
+              <div className="status-row">
+                <strong>{aiReport.summary}</strong>
+                <span>{formatShortDate(aiReport.createdAt)}</span>
+              </div>
+              <div className="status-row">
+                <strong>Needs attention</strong>
+                <span>{aiReport.needsAttention}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-panel">
+              <strong>No weekly report generated yet</strong>
+              <span>Report records will appear here after the weekly AI workflow runs.</span>
+            </div>
+          )}
         </section>
 
         <section className="workspace-section">
           <div className="section-heading">
             <div>
               <h2>Risks and actions</h2>
-              <p>Open risks and recommended actions will be linked as the loop comes online.</p>
+              <p>Open operating risks and owner follow-up from the action queue.</p>
             </div>
           </div>
-          <div className="empty-panel">
-            <strong>No open risks</strong>
-            <span>No recommended actions</span>
-          </div>
+          {riskEvents.length > 0 ? (
+            <div className="status-list">
+              {riskEvents.map((risk) => (
+                <div className="status-row" key={risk.id}>
+                  <strong>{risk.title}</strong>
+                  <span>{risk.severity}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-panel compact">
+              <strong>No open risks</strong>
+            </div>
+          )}
+
+          {recommendedActions.length > 0 ? (
+            <div className="status-list stacked-list">
+              {recommendedActions.map((action) => (
+                <div className="status-row" key={action.id}>
+                  <strong>{action.title}</strong>
+                  <span>{action.owner ?? action.priority}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-panel compact stacked-list">
+              <strong>No recommended actions</strong>
+            </div>
+          )}
         </section>
       </div>
     </>
