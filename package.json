@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "n8n:list": "npx --yes n8nac list"
+  },
+  "dependencies": {
+    "@n8n-as-code/skills": "^1.10.0"
+  }
+}
