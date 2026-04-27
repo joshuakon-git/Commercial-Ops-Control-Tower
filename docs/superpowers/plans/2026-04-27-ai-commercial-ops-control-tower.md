@@ -651,7 +651,7 @@ git commit -m "feat: add dashboard data layer and KPIs"
 - Create: `services/forecasting/forecast.py`
 - Create: `services/forecasting/test_forecast.py`
 
-- [ ] **Step 1: Create deterministic test data in `test_forecast.py`**
+- [x] **Step 1: Create deterministic test data in `test_forecast.py`**
 
 Include tests for:
 
@@ -662,7 +662,7 @@ Include tests for:
 - Stockout risk.
 - Deal slippage risk.
 
-- [ ] **Step 2: Run tests and confirm they fail**
+- [x] **Step 2: Run tests and confirm they fail**
 
 Run:
 
@@ -672,7 +672,7 @@ python -m pytest services/forecasting/test_forecast.py -v
 
 Expected: fail because implementation does not exist yet.
 
-- [ ] **Step 3: Implement `forecast.py`**
+- [x] **Step 3: Implement `forecast.py`**
 
 Implement pure functions:
 
@@ -685,7 +685,7 @@ detect_stockout(quantity_on_hand: int, weekly_units: float, lead_time_days: int)
 detect_deal_slippage(expected_close_date: str, status: str, value: float) -> dict | None
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -695,7 +695,7 @@ python -m pytest services/forecasting/test_forecast.py -v
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -710,7 +710,7 @@ git commit -m "feat: add explainable forecasting and risk rules"
 
 - Create: `workflows/local_5678_joshua_k/personal/ingestion.workflow.ts`
 
-- [ ] **Step 1: Check n8n status**
+- [x] **Step 1: Check n8n status**
 
 Run:
 
@@ -720,7 +720,7 @@ npx --yes n8nac list
 
 Expected: workspace lists local and/or remote workflows without initialization errors.
 
-- [ ] **Step 2: Research patterns and nodes**
+- [x] **Step 2: Research patterns and nodes**
 
 Run:
 
@@ -731,11 +731,11 @@ npx --yes n8nac skills search "postgres"
 npx --yes n8nac skills search "code"
 ```
 
-- [ ] **Step 3: Inspect node schemas**
+- [x] **Step 3: Inspect node schemas**
 
 Run `node-info` for each chosen node. Use exact `type`, highest valid `typeVersion`, and exact parameter names.
 
-- [ ] **Step 4: Build workflow**
+- [x] **Step 4: Build workflow**
 
 Create a workflow with:
 
@@ -747,7 +747,7 @@ Use Code nodes only for validation and row normalization that cannot be expresse
 
 The workflow must have a manual/demo execution path so the portfolio demo does not depend on an external upload event.
 
-- [ ] **Step 5: Validate locally**
+- [x] **Step 5: Validate locally**
 
 Run:
 
@@ -757,7 +757,7 @@ npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/ingestion
 
 Expected: validation passes.
 
-- [ ] **Step 6: Confirm local listing**
+- [x] **Step 6: Confirm local listing**
 
 Run:
 
@@ -767,7 +767,7 @@ npx --yes n8nac list --local
 
 Expected: `ingestion.workflow.ts` appears.
 
-- [ ] **Step 7: Push and verify**
+- [x] **Step 7: Push and verify**
 
 Run:
 
@@ -777,7 +777,7 @@ npx --yes n8nac push workflows/local_5678_joshua_k/personal/ingestion.workflow.t
 
 Expected: workflow is created/updated and live verification passes.
 
-- [ ] **Step 8: Test if HTTP-triggered**
+- [x] **Step 8: Test if HTTP-triggered**
 
 Run:
 
@@ -789,7 +789,7 @@ npx --yes n8nac test <workflowId> --prod
 
 If a Class A configuration gap appears, stop and document required credentials. If a Class B wiring error appears, fix and retest.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 Run:
 
