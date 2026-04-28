@@ -6,6 +6,7 @@ import {
   Activity,
   AlertTriangle,
   ClipboardList,
+  Database,
   DatabaseZap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -32,6 +33,11 @@ const navItems: NavItem[] = [
     href: "/actions",
     label: "Actions",
     icon: ClipboardList,
+  },
+  {
+    href: "/sample-data",
+    label: "Sample Data",
+    icon: Database,
   },
   {
     href: "/data-health",

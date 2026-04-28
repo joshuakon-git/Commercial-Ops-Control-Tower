@@ -374,6 +374,32 @@ select {
   text-align: right;
 }
 
+.source-note {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: #0b5c55;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.source-note strong {
+  font-size: 14px;
+}
+
+.source-note span,
+.source-link {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.source-link {
+  color: var(--accent);
+  font-weight: 650;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -540,6 +566,10 @@ select {
   border-bottom: 0;
 }
 
+.sample-data-table {
+  min-width: 780px;
+}
+
 .ops-table td strong,
 .ops-table td span {
   display: block;
@@ -609,7 +639,7 @@ select {
   }
 
   .nav-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .nav-link {

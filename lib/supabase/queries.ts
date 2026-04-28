@@ -16,6 +16,12 @@ import type {
   MetricSnapshot,
   RecommendedAction,
   RiskEvent,
+  SampleCapacityPosition,
+  SampleData,
+  SampleExpense,
+  SamplePipelineDeal,
+  SampleSalesOrder,
+  SampleTarget,
   SourceTableCount,
 } from "../metrics/types.ts";
 
@@ -55,6 +61,10 @@ function unwrapCount(result: { count: number | null; error: { message: string } 
   }
 
   return result.count ?? 0;
+}
+
+function toRequiredNumber(value: number | string) {
+  return typeof value === "number" ? value : Number(value);
 }
 
 function sortRisksByUrgency(risks: RiskEvent[]) {
@@ -254,4 +264,170 @@ export async function getRequiredSourceTableCounts(
   client: QueryClient = getSupabaseClient(),
 ): Promise<SourceTableCount[]> {
   return Promise.all(requiredSourceTables.map((tableName) => getSourceTableCount(client, tableName)));
+}
+
+type SampleSalesOrderRow = {
+  id: string;
+  order_date: string;
+  customer: string;
+  product: string;
+  sku: string;
+  units: number;
+  revenue: number | string;
+  discount: number | string;
+  channel: string;
+  unit_cost: number | string;
+  gross_margin: number | string;
+};
+
+type SamplePipelineDealRow = {
+  id: string;
+  deal_name: string;
+  stage: string;
+  value: number | string;
+  probability: number | string;
+  weighted_value: number | string;
+  expected_close_date: string;
+  owner: string;
+  status: string;
+};
+
+type SampleExpenseRow = {
+  id: string;
+  expense_date: string;
+  category: string;
+  supplier: string;
+  amount: number | string;
+  fixed_or_variable: string;
+};
+
+type SampleCapacityPositionRow = {
+  id: string;
+  resource_code: string;
+  resource_name: string;
+  quantity_on_hand: number;
+  reorder_point: number;
+  lead_time_days: number;
+  unit_cost: number | string;
+};
+
+type SampleTargetRow = {
+  id: string;
+  period_start: string;
+  period_end: string;
+  revenue_target: number | string;
+  gross_margin_target: number | string;
+  pipeline_coverage_target: number | string;
+};
+
+function normalizeSampleSalesOrder(row: SampleSalesOrderRow): SampleSalesOrder {
+  return {
+    id: row.id,
+    orderDate: row.order_date,
+    customer: row.customer,
+    product: row.product,
+    sku: row.sku,
+    units: row.units,
+    revenue: toRequiredNumber(row.revenue),
+    discount: toRequiredNumber(row.discount),
+    channel: row.channel,
+    unitCost: toRequiredNumber(row.unit_cost),
+    grossMargin: toRequiredNumber(row.gross_margin),
+  };
+}
+
+function normalizeSamplePipelineDeal(row: SamplePipelineDealRow): SamplePipelineDeal {
+  return {
+    id: row.id,
+    dealName: row.deal_name,
+    stage: row.stage,
+    value: toRequiredNumber(row.value),
+    probability: toRequiredNumber(row.probability),
+    weightedValue: toRequiredNumber(row.weighted_value),
+    expectedCloseDate: row.expected_close_date,
+    owner: row.owner,
+    status: row.status,
+  };
+}
+
+function normalizeSampleExpense(row: SampleExpenseRow): SampleExpense {
+  return {
+    id: row.id,
+    expenseDate: row.expense_date,
+    category: row.category,
+    supplier: row.supplier,
+    amount: toRequiredNumber(row.amount),
+    fixedOrVariable: row.fixed_or_variable,
+  };
+}
+
+function normalizeSampleCapacityPosition(row: SampleCapacityPositionRow): SampleCapacityPosition {
+  return {
+    id: row.id,
+    resourceCode: row.resource_code,
+    resourceName: row.resource_name,
+    quantityOnHand: row.quantity_on_hand,
+    reorderPoint: row.reorder_point,
+    leadTimeDays: row.lead_time_days,
+    unitCost: toRequiredNumber(row.unit_cost),
+  };
+}
+
+function normalizeSampleTarget(row: SampleTargetRow): SampleTarget {
+  return {
+    id: row.id,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    revenueTarget: toRequiredNumber(row.revenue_target),
+    grossMarginTarget: toRequiredNumber(row.gross_margin_target),
+    pipelineCoverageTarget: toRequiredNumber(row.pipeline_coverage_target),
+  };
+}
+
+export async function getSampleData(client: QueryClient = getSupabaseClient()): Promise<SampleData> {
+  const [salesOrders, pipelineDeals, expenses, capacityPositions, targets] = await Promise.all([
+    client
+      .from("sales_orders")
+      .select("id, order_date, customer, product, sku, units, revenue, discount, channel, unit_cost, gross_margin")
+      .order("order_date", { ascending: false })
+      .limit(12),
+    client
+      .from("crm_pipeline")
+      .select("id, deal_name, stage, value, probability, weighted_value, expected_close_date, owner, status")
+      .order("expected_close_date", { ascending: true })
+      .limit(12),
+    client
+      .from("expenses")
+      .select("id, expense_date, category, supplier, amount, fixed_or_variable")
+      .order("expense_date", { ascending: false })
+      .limit(12),
+    client
+      .from("capacity_positions")
+      .select("id, resource_code, resource_name, quantity_on_hand, reorder_point, lead_time_days, unit_cost")
+      .order("resource_code", { ascending: true })
+      .limit(12),
+    client
+      .from("targets")
+      .select("id, period_start, period_end, revenue_target, gross_margin_target, pipeline_coverage_target")
+      .order("period_start", { ascending: true })
+      .limit(12),
+  ]);
+
+  return {
+    salesOrders: unwrapRows(salesOrders, "Unable to load sample sales orders").map((row) =>
+      normalizeSampleSalesOrder(row as SampleSalesOrderRow),
+    ),
+    pipelineDeals: unwrapRows(pipelineDeals, "Unable to load sample CRM pipeline").map((row) =>
+      normalizeSamplePipelineDeal(row as SamplePipelineDealRow),
+    ),
+    expenses: unwrapRows(expenses, "Unable to load sample expenses").map((row) =>
+      normalizeSampleExpense(row as SampleExpenseRow),
+    ),
+    capacityPositions: unwrapRows(capacityPositions, "Unable to load sample capacity positions").map((row) =>
+      normalizeSampleCapacityPosition(row as SampleCapacityPositionRow),
+    ),
+    targets: unwrapRows(targets, "Unable to load sample targets").map((row) =>
+      normalizeSampleTarget(row as SampleTargetRow),
+    ),
+  };
 }

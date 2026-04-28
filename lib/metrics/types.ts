@@ -119,6 +119,68 @@ export type SourceTableCount = {
   rowCount: number;
 };
 
+export type SampleSalesOrder = {
+  id: string;
+  orderDate: string;
+  customer: string;
+  product: string;
+  sku: string;
+  units: number;
+  revenue: number;
+  discount: number;
+  channel: string;
+  unitCost: number;
+  grossMargin: number;
+};
+
+export type SamplePipelineDeal = {
+  id: string;
+  dealName: string;
+  stage: string;
+  value: number;
+  probability: number;
+  weightedValue: number;
+  expectedCloseDate: string;
+  owner: string;
+  status: string;
+};
+
+export type SampleExpense = {
+  id: string;
+  expenseDate: string;
+  category: string;
+  supplier: string;
+  amount: number;
+  fixedOrVariable: string;
+};
+
+export type SampleCapacityPosition = {
+  id: string;
+  resourceCode: string;
+  resourceName: string;
+  quantityOnHand: number;
+  reorderPoint: number;
+  leadTimeDays: number;
+  unitCost: number;
+};
+
+export type SampleTarget = {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  revenueTarget: number;
+  grossMarginTarget: number;
+  pipelineCoverageTarget: number;
+};
+
+export type SampleData = {
+  salesOrders: SampleSalesOrder[];
+  pipelineDeals: SamplePipelineDeal[];
+  expenses: SampleExpense[];
+  capacityPositions: SampleCapacityPosition[];
+  targets: SampleTarget[];
+};
+
 export type DataHealthCheck = {
   label: string;
   state: "ok" | "warning" | "danger";
