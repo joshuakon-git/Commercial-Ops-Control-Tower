@@ -1,75 +1,116 @@
 # AI Commercial Ops Control Tower
 
-A portfolio-grade operating layer for small businesses that turns sales, costs, pipeline, and capacity data into KPIs, forecasts, risk events, AI management summaries, and recommended actions.
+AI Commercial Ops Control Tower is a portfolio Next.js, Supabase, and n8n application for monitoring the commercial health of a small business. It turns seeded sales, pipeline, expense, capacity, and target data into KPI snapshots, revenue forecasts, risk signals, AI operating summaries, and recommended owner actions.
 
-The MVP uses safe seeded demo data, Supabase, n8n-as-code workflows, deterministic forecasting/risk rules, and a Next.js dashboard.
+The project is designed as a public technical showcase: the data is safe demo data, the operating logic is explainable, and each dashboard view can be traced back to Supabase records and n8n workflow outputs.
 
-## Portfolio Positioning
+## Why It Matters
 
-This project demonstrates an end-to-end commercial operations loop:
+Small teams often track revenue, pipeline, costs, inventory, and follow-up actions in separate tools. This project shows how those signals can be brought into one operating layer so a commercial operator can answer:
 
-1. Ingest messy operating data.
-2. Normalize it into an operational database.
-3. Calculate commercial KPIs.
-4. Forecast revenue and detect risks.
-5. Generate a validated AI management report.
-6. Create recommended actions for operator follow-up.
-7. Present the current operating picture in a dashboard.
+- Are we pacing toward revenue target?
+- Is margin or cash pressure getting worse?
+- Which open deals or capacity constraints put the forecast at risk?
+- What actions should owners take next?
+- Is the underlying data fresh enough to trust?
 
-It is intentionally explainable. The forecasting and risk layer favors deterministic business rules over opaque ML so a reviewer can trace each recommendation back to demo data.
+The application favors deterministic business rules and transparent workflow logs over opaque recommendations. Charts, KPIs, risks, and actions are derived from Supabase/demo data; the frontend does not invent records.
+
+## Product Surface
+
+| Route | Purpose |
+| --- | --- |
+| `/dashboard` | KPI overview, AI report summary, urgent risks, and recent recommended actions. |
+| `/forecasts-risks` | Revenue pacing, pipeline, margin/cost, and capacity charts with risk sections for slipping deals, margin/expense pressure, and stock/capacity constraints. |
+| `/actions` | Recommended action queue with owner, priority, status, due dates, and linked risk context. |
+| `/data-health` | Import status, source table coverage, workflow/report readiness, and freshness checks. |
+| `/sample-data` | Read-only view of the seeded source records that drive the operating pages. |
+
+## Core Capabilities
+
+- Commercial KPI monitoring for revenue, gross margin, operating costs, net contribution, average order value, sales velocity, weighted pipeline, pipeline coverage, stock risk count, and cash pressure.
+- Revenue forecasting based on recent observed revenue, with target comparison and forecast bands.
+- Risk detection for revenue pacing, margin drop, expense pressure, stockout/capacity risk, and deal slippage.
+- AI weekly report generation from structured operating data, with JSON validation before saving the report.
+- Recommended action creation from high-severity risks, including owner, priority, due date, and linked risk context.
+- Data health checks so reviewers can see whether imports, workflow logs, source tables, metric snapshots, and AI reports are current.
 
 ## Architecture
 
 ```text
-Seed CSVs / demo payloads
-  -> n8n ingestion workflow
+Seeded CSV / SQL demo data
   -> Supabase source tables
-  -> n8n daily metrics workflow
-  -> metric snapshots
-  -> n8n forecast and risk workflow
-  -> forecasts + risk events
-  -> n8n weekly AI report workflow
-  -> AI reports + action log
-  -> n8n action automation workflow
-  -> recommended actions + action log
-  -> Next.js dashboard on Vercel
+  -> n8n ingestion, metrics, forecast/risk, AI report, and action workflows
+  -> Supabase output tables
+  -> lib/supabase query helpers
+  -> lib/metrics TypeScript transforms
+  -> Next.js App Router dashboard pages
+  -> Recharts visualizations and operator tables
 ```
 
-Core documentation:
+### Stack
 
-- [Demo script](docs/demo-script.md)
-- [Architecture guide](docs/architecture.md)
-- [Implementation plan](docs/superpowers/plans/2026-04-27-ai-commercial-ops-control-tower.md)
+- **Next.js App Router**: server-rendered dashboard routes under `app/`.
+- **Supabase Postgres**: source tables, generated output tables, demo read policies, and seeded operating data.
+- **n8n automation workflows**: version-controlled workflow files that ingest, calculate, forecast, report, and create actions.
+- **TypeScript transform layer**: `lib/metrics` normalizes Supabase rows into UI models, KPI tiles, chart series, and health checks.
+- **Recharts**: charting for revenue pacing, pipeline quality, margin/cost movement, and capacity risk.
 
-## MVP Scope
+## Data Model
 
-- Seeded demo commercial data.
-- Supabase operational database with RLS enabled.
-- n8n-as-code automation workflows.
-- Explainable forecasting and risk rules.
-- Validated weekly AI ops summary.
-- Recommended action queue.
-- Next.js operator dashboard with four views.
+The Supabase schema includes source tables for demo operating records:
 
-## Dashboard Views
+- `sales_orders`
+- `crm_pipeline`
+- `expenses`
+- `capacity_positions`
+- `targets`
+- `raw_uploads`
 
-- `/dashboard`: KPI tiles, latest AI summary, urgent risks, and recent actions.
-- `/forecasts-risks`: revenue forecast chart, target pacing, slipping deals, margin pressure, expense pressure, and capacity risks.
-- `/actions`: full recommended action queue with owner, due date, priority, status, and linked risk.
-- `/data-health`: import history, source table coverage, workflow recency, and stale data warnings.
+Workflow output tables drive the app experience:
 
-## Screenshots
+- `metric_snapshots`
+- `forecasts`
+- `risk_events`
+- `ai_reports`
+- `recommended_actions`
+- `action_log`
 
-Capture these after the seeded demo run has populated metrics, forecasts, risks, AI report, actions, and data-health records.
+Seed files live under `supabase/seed/`, and the initial schema is in `supabase/migrations/001_initial_schema.sql`.
 
-| Slot | Dashboard route | Capture |
-| --- | --- | --- |
-| Overview | `/dashboard` | KPI tiles, AI summary, urgent risks, and recent actions. |
-| Forecasts & Risks | `/forecasts-risks` | Revenue forecast chart plus risk sections for pacing, deals, margin/expenses, and capacity. |
-| Actions | `/actions` | Action queue showing priority, owner, due date, status, and linked risk context. |
-| Data Health | `/data-health` | Import history, source table coverage, stale data warnings, and workflow/report readiness. |
+## n8n Workflows
 
-## Setup
+The automation layer is implemented with n8n and stored under `workflows/` so the orchestration logic can be reviewed alongside the application code. It covers ingestion, KPI generation, forecast/risk detection, AI reporting, and recommended action creation.
+
+| Workflow | Trigger / source | Purpose | Output / effect |
+| --- | --- | --- | --- |
+| Commercial Ops Ingestion | POST webhook plus manual demo trigger | Validates and cleans incoming sales order payloads. | Inserts `sales_orders`, writes `raw_uploads`, and logs ingestion results to `action_log`. |
+| Commercial Ops Daily Metrics | Daily schedule plus manual demo trigger | Queries clean operating tables and calculates the latest KPI snapshot. | Inserts a row into `metric_snapshots` and logs the run. |
+| Commercial Ops Forecast and Risk | Daily schedule plus manual demo trigger | Builds revenue forecasts and applies deterministic risk rules for pacing, margin, expenses, capacity, and deal slippage. | Inserts `forecasts`, upserts `risk_events`, and logs the result. |
+| Commercial Ops Weekly AI Report | Weekly schedule plus manual demo trigger | Pulls structured metrics, forecasts, risks, and actions into an LLM report prompt, then validates the JSON response. | Saves `ai_reports`, optionally posts Slack text, and logs success or validation failure. |
+| Commercial Ops Action Automation | Hourly schedule plus manual demo trigger | Finds high-severity open risks without existing follow-up and classifies them into owner actions. | Inserts `recommended_actions`, optionally sends a Slack alert, and logs created or skipped actions. |
+
+## Demo Data Flow
+
+1. Seeded records populate Supabase source tables for orders, CRM pipeline, expenses, capacity, and targets.
+2. The ingestion workflow can add validated sales order payloads and record import history.
+3. The daily metrics workflow aggregates source tables into `metric_snapshots`.
+4. The forecast/risk workflow reads the latest commercial state and writes `forecasts` plus `risk_events`.
+5. The action workflow converts high-severity risk events into recommended actions.
+6. The weekly AI report workflow summarizes the structured outputs into `ai_reports`.
+7. The Next.js app queries Supabase, normalizes rows through `lib/metrics`, and renders the dashboard pages.
+
+## What Reviewers Should Look At
+
+- `app/dashboard/page.tsx`, `app/forecasts-risks/page.tsx`, `app/actions/page.tsx`, `app/data-health/page.tsx`, and `app/sample-data/page.tsx` for the product surface.
+- `lib/supabase/queries.ts` for normalized reads from Supabase.
+- `lib/metrics/transforms.ts` for KPI, chart, risk, action, and health-check transformations.
+- `components/charts/` for the Recharts visualizations.
+- `supabase/migrations/001_initial_schema.sql` and `supabase/seed/` for the demo operating model.
+- `workflows/local_5678_joshua_k/personal/*.workflow.ts` for the automation layer.
+- `services/forecasting/forecast.py` for the reference forecasting service used by the forecasting concept.
+
+## Local Setup
 
 Install dependencies:
 
@@ -77,96 +118,80 @@ Install dependencies:
 npm install
 ```
 
-Create or select a hosted Supabase project containing only safe demo data. Apply:
-
-```text
-supabase/migrations/001_initial_schema.sql
-supabase/seed/seed.sql
-```
-
-Configure the dashboard with public Supabase read settings:
+Create a local `.env` from `.env.example` and provide public Supabase read settings for a demo project:
 
 ```powershell
 NEXT_PUBLIC_SUPABASE_URL=<your-demo-project-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-demo-anon-key>
 ```
 
-Confirm the n8n-as-code workspace is initialized before running workflow commands:
-
-```powershell
-npx --yes n8nac list
-```
-
-The active local workflow directory is:
+Apply the schema and seed data to a Supabase project that contains only safe demo records:
 
 ```text
-workflows/local_5678_joshua_k/personal
+supabase/migrations/001_initial_schema.sql
+supabase/seed/seed.sql
 ```
 
-## Demo
-
-Use [docs/demo-script.md](docs/demo-script.md) as the reviewer run-through.
-
-Short version:
-
-1. Reset or load the Supabase demo schema and seed data.
-2. Run `Commercial Ops Ingestion`.
-3. Run `Commercial Ops Daily Metrics`.
-4. Run `Commercial Ops Forecast and Risk`.
-5. Run `Commercial Ops Weekly AI Report`.
-6. Run `Commercial Ops Action Automation`.
-7. Start the dashboard and review the four dashboard pages.
-
-Workflow IDs:
-
-| Workflow | ID |
-| --- | --- |
-| Commercial Ops Ingestion | `k8jxAQfrhxP7i3vQ` |
-| Commercial Ops Daily Metrics | `W4ZVf4l9JtpNhbH1` |
-| Commercial Ops Forecast and Risk | `cQtgLAXrNmvbcbVX` |
-| Commercial Ops Weekly AI Report | `NwsCx9dJMP1uOYOc` |
-| Commercial Ops Action Automation | `zLSmXRKeh51hJjhO` |
-
-Run the dashboard locally:
+Run the dashboard:
 
 ```powershell
 npm run dev
 ```
 
-## Verification
+Build the app:
 
 ```powershell
 npm run typecheck
 npm run build
-python -m pytest services/forecasting/test_forecast.py -v
-npx --yes n8nac list
-npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/ingestion.workflow.ts
-npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/daily-metrics.workflow.ts
-npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/forecast-risk.workflow.ts
-npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/weekly-ai-report.workflow.ts
-npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/action-automation.workflow.ts
 ```
 
-## Deployment
+Run the focused Node tests:
 
-- Dashboard: deploy the Next.js app to Vercel.
-- Database: use a hosted Supabase project seeded with safe demo data.
-- n8n: run local/self-hosted for a recorded demo, or hosted n8n if available.
-- Screenshots/video: capture only after the seeded demo run has populated the operating outputs.
-- Public demo: expose only safe demo data through the Supabase anon key.
+```powershell
+node --experimental-strip-types --test lib\metrics\transforms.test.mjs
+node --experimental-strip-types --test lib\formatting\currency.test.mjs
+node --experimental-strip-types --test lib\supabase\queries.test.mjs
+```
 
-## Security
+## Screenshots
 
-- Dashboard reads safe demo data through the Supabase anon key.
-- Supabase RLS is enabled in the schema.
-- Public portfolio artifacts should use seeded demo records only.
-- Local environment files and private connection values are never committed.
+| Slot | Dashboard route | Capture |
+| --- | --- | --- |
+| Overview | `/dashboard` | KPI tiles, AI summary, urgent risks, and recent actions. |
+| Forecasts & Risks | `/forecasts-risks` | Forecast/pacing chart plus risk sections for deals, margin/expenses, and capacity. |
+| Actions | `/actions` | Action queue showing priority, owner, due date, status, and linked risk context. |
+| Data Health | `/data-health` | Import history, source table coverage, stale data warnings, and workflow/report readiness. |
 
-## Phase-Two Roadmap
+### Overview
 
-- Add live connectors for commerce, payments, CRM, finance, and spreadsheet sources.
-- Add operator controls for acknowledging risks and updating action status from the dashboard.
-- Add richer audit history for workflow runs and action lifecycle changes.
-- Add scenario modeling for target changes, constrained inventory, and pipeline pull-forward.
-- Add tenant-aware access controls if this becomes a hosted multi-business product.
-- Expand report generation into role-specific executive, sales, finance, and operations summaries.
+![Dashboard overview](assets/screenshots/dashboard.png)
+
+### Forecasts & Risks
+
+![Forecasts and risks dashboard](assets/screenshots/forecasts-risks.png)
+
+### Actions
+
+![Recommended action queue](assets/screenshots/actions.png)
+
+### Data Health
+
+![Data health dashboard](assets/screenshots/data-health.png)
+
+The `/sample-data` route is intentionally not pictured here; the same demo records can be reviewed directly in `supabase/seed/`.
+
+## Deployment Notes
+
+- Deploy the Next.js dashboard to Vercel or another Node-compatible host.
+- Use a hosted Supabase project seeded only with public-safe demo data.
+- Run n8n locally or in a hosted workspace for demos.
+- Keep private credentials in environment variables or n8n credentials, not in committed files.
+- Use the Supabase anon key only for read-safe demo data exposed by the public dashboard.
+
+## Roadmap
+
+- Add live connectors for CRM, finance, commerce, payments, and spreadsheet sources.
+- Add dashboard controls for acknowledging risks and updating action status.
+- Expand audit history for workflow runs and action lifecycle changes.
+- Add scenario modeling for revenue target changes, constrained inventory, and pipeline pull-forward.
+- Add tenant-aware access controls if the app becomes a hosted multi-business product.
