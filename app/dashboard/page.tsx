@@ -1,11 +1,13 @@
+import { ActionTable } from "@/components/actions/ActionTable";
 import { KpiTile } from "@/components/kpi/KpiTile";
+import { RiskFeed } from "@/components/risks/RiskFeed";
 import { formatShortDate } from "@/lib/formatting/dates";
 import { buildKpiTiles } from "@/lib/metrics/transforms";
 import {
   getLatestAiReport,
   getLatestImports,
   getLatestMetricSnapshot,
-  getOpenRiskEvents,
+  getOperatingRiskEvents,
   getRecommendedActions,
 } from "@/lib/supabase/queries";
 
@@ -14,12 +16,14 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const [snapshot, riskEvents, aiReport, recommendedActions, latestImports] = await Promise.all([
     getLatestMetricSnapshot(),
-    getOpenRiskEvents(),
+    getOperatingRiskEvents(),
     getLatestAiReport(),
     getRecommendedActions(),
     getLatestImports(),
   ]);
   const kpiTiles = buildKpiTiles(snapshot, latestImports);
+  const urgentRisks = riskEvents.filter((risk) => risk.status === "open").slice(0, 3);
+  const recentActions = recommendedActions.slice(0, 4);
 
   return (
     <>
@@ -76,41 +80,24 @@ export default async function DashboardPage() {
         <section className="workspace-section">
           <div className="section-heading">
             <div>
-              <h2>Risks and actions</h2>
-              <p>Open operating risks and owner follow-up from the action queue.</p>
+              <h2>Urgent risks</h2>
+              <p>Open operating risks that need attention before the next workflow cycle.</p>
             </div>
           </div>
-          {riskEvents.length > 0 ? (
-            <div className="status-list">
-              {riskEvents.map((risk) => (
-                <div className="status-row" key={risk.id}>
-                  <strong>{risk.title}</strong>
-                  <span>{risk.severity}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-panel compact">
-              <strong>No open risks</strong>
-            </div>
-          )}
-
-          {recommendedActions.length > 0 ? (
-            <div className="status-list stacked-list">
-              {recommendedActions.map((action) => (
-                <div className="status-row" key={action.id}>
-                  <strong>{action.title}</strong>
-                  <span>{action.owner ?? action.priority}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-panel compact stacked-list">
-              <strong>No recommended actions</strong>
-            </div>
-          )}
+          <RiskFeed risks={urgentRisks} emptyLabel="No open risks" />
         </section>
       </div>
+
+      <section className="workspace-section">
+        <div className="section-heading">
+          <div>
+            <h2>Recent actions</h2>
+            <p>Active follow-up created from operating risks.</p>
+          </div>
+          <span className="tag">{recentActions.length} active</span>
+        </div>
+        <ActionTable actions={recentActions} risks={riskEvents} />
+      </section>
     </>
   );
 }

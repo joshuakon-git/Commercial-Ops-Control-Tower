@@ -1,11 +1,20 @@
-export default function ActionsPage() {
+import { ActionTable } from "@/components/actions/ActionTable";
+import { getActionQueue, getOperatingRiskEvents } from "@/lib/supabase/queries";
+
+export const dynamic = "force-dynamic";
+
+export default async function ActionsPage() {
+  const [actions, risks] = await Promise.all([getActionQueue(), getOperatingRiskEvents()]);
+  const openCount = actions.filter((action) => action.status === "open").length;
+  const inProgressCount = actions.filter((action) => action.status === "in_progress").length;
+
   return (
     <>
       <header className="page-header">
         <p className="eyebrow">Actions</p>
         <h1 className="page-title">Recommended action queue</h1>
         <p className="page-description">
-          Track owner follow-up, priority, due dates, and linked risk events once automation starts creating actions.
+          Track owner follow-up, priority, due dates, status, and linked risk events from the automation workflow.
         </p>
       </header>
 
@@ -13,14 +22,13 @@ export default function ActionsPage() {
         <div className="section-heading">
           <div>
             <h2>Action queue</h2>
-            <p>Actions will use their own lifecycle: open, in progress, done, or dismissed.</p>
+            <p>Actions move from open to in progress, then done or dismissed.</p>
           </div>
-          <span className="tag">Empty</span>
+          <span className="tag">
+            {openCount} open / {inProgressCount} in progress
+          </span>
         </div>
-        <div className="empty-panel">
-          <strong>No recommended actions</strong>
-          <span>High-severity risks will create action records in Task 10.</span>
-        </div>
+        <ActionTable actions={actions} risks={risks} />
       </section>
     </>
   );

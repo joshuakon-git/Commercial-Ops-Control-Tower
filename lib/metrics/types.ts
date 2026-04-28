@@ -41,6 +41,14 @@ export type Forecast = {
   createdAt: string;
 };
 
+export type RevenueForecastPoint = {
+  date: string;
+  label: string;
+  actualRevenue: number | null;
+  forecastRevenue: number | null;
+  targetRevenue: number | null;
+};
+
 export type RiskSeverity = "low" | "medium" | "high";
 export type RiskStatus = "open" | "acknowledged" | "resolved";
 
@@ -94,6 +102,27 @@ export type RecommendedAction = {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
+};
+
+export type ActionLog = {
+  id: string;
+  actionType: string;
+  target: string;
+  status: string;
+  payload: Record<string, unknown>;
+  result: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type SourceTableCount = {
+  tableName: string;
+  rowCount: number;
+};
+
+export type DataHealthCheck = {
+  label: string;
+  state: "ok" | "warning" | "danger";
+  detail: string;
 };
 
 export type ImportStatus = "pending" | "succeeded" | "failed";

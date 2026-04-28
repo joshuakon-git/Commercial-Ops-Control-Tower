@@ -1,12 +1,32 @@
-const healthRules = [
-  "No successful import in the last 7 days",
-  "No metric snapshot in the last 48 hours",
-  "Latest workflow run failed",
-  "Required source table has zero rows",
-  "Latest AI report is older than 8 days",
-];
+import { formatShortDate } from "@/lib/formatting/dates";
+import { buildDataHealthChecks } from "@/lib/metrics/transforms";
+import {
+  getLatestAiReport,
+  getLatestImports,
+  getLatestMetricSnapshot,
+  getLatestWorkflowRun,
+  getRequiredSourceTableCounts,
+} from "@/lib/supabase/queries";
 
-export default function DataHealthPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DataHealthPage() {
+  const [latestImports, latestSnapshot, latestWorkflowRun, sourceTableCounts, latestAiReport] = await Promise.all([
+    getLatestImports(),
+    getLatestMetricSnapshot(),
+    getLatestWorkflowRun(),
+    getRequiredSourceTableCounts(),
+    getLatestAiReport(),
+  ]);
+  const healthChecks = buildDataHealthChecks({
+    latestImports,
+    latestSnapshot,
+    latestWorkflowRun,
+    sourceTableCounts,
+    latestAiReport,
+  });
+  const warningCount = healthChecks.filter((check) => check.state !== "ok").length;
+
   return (
     <>
       <header className="page-header">
@@ -20,20 +40,64 @@ export default function DataHealthPage() {
       <section className="workspace-section">
         <div className="section-heading">
           <div>
-            <h2>Health checks</h2>
-            <p>These checks define the data-health surface for later workflow and query wiring.</p>
+            <h2>Stale data warnings</h2>
+            <p>Health checks for import age, metric freshness, workflow runs, source coverage, and AI report recency.</p>
           </div>
-          <span className="tag">Defined</span>
+          <span className={warningCount > 0 ? "tag warning" : "tag"}>{warningCount} warnings</span>
         </div>
         <div className="status-list">
-          {healthRules.map((rule) => (
-            <div className="status-row" key={rule}>
-              <strong>{rule}</strong>
-              <span>Waiting for live status</span>
+          {healthChecks.map((check) => (
+            <div className="status-row health-row" data-state={check.state} key={check.label}>
+              <strong>{check.label}</strong>
+              <span>{check.detail}</span>
             </div>
           ))}
         </div>
       </section>
+
+      <div className="section-grid two-column">
+        <section className="workspace-section">
+          <div className="section-heading">
+            <div>
+              <h2>Import history</h2>
+              <p>Latest source imports from Supabase raw upload records.</p>
+            </div>
+          </div>
+          {latestImports.length > 0 ? (
+            <div className="status-list">
+              {latestImports.map((item) => (
+                <div className="status-row" key={item.id}>
+                  <strong>{item.sourceName}</strong>
+                  <span>
+                    {item.status} / {item.rowsImported} of {item.rowsReceived} rows / {formatShortDate(item.createdAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-panel compact">
+              <strong>No imports found</strong>
+            </div>
+          )}
+        </section>
+
+        <section className="workspace-section">
+          <div className="section-heading">
+            <div>
+              <h2>Source table coverage</h2>
+              <p>Required source tables used by metrics, forecasts, and risks.</p>
+            </div>
+          </div>
+          <div className="status-list">
+            {sourceTableCounts.map((item) => (
+              <div className="status-row" key={item.tableName}>
+                <strong>{item.tableName}</strong>
+                <span>{item.rowCount} rows</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </>
   );
 }
