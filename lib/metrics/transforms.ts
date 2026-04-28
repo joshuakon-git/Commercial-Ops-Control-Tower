@@ -8,10 +8,17 @@ import type {
   ImportHealth,
   KpiState,
   KpiTileModel,
+  CapacityRiskPoint,
+  MarginCostPoint,
   MetricSnapshot,
+  PipelineStagePoint,
   RevenueForecastPoint,
   RecommendedAction,
   RiskEvent,
+  SampleCapacityPosition,
+  SampleExpense,
+  SamplePipelineDeal,
+  SampleSalesOrder,
   SourceTableCount,
 } from "./types.ts";
 
@@ -380,6 +387,9 @@ export function buildRevenueForecastSeries(
 ): RevenueForecastPoint[] {
   const targetRevenue = deriveTargetRevenue(snapshots, forecasts);
   const pointsByDate = new Map<string, RevenueForecastPoint>();
+  const forecastRun = getLatestForecastRun(forecasts).sort((left, right) =>
+    left.forecastDate.localeCompare(right.forecastDate),
+  );
 
   for (const snapshot of snapshots) {
     pointsByDate.set(snapshot.snapshotDate, {
@@ -387,22 +397,158 @@ export function buildRevenueForecastSeries(
       label: formatShortDate(snapshot.snapshotDate),
       actualRevenue: snapshot.revenue,
       forecastRevenue: null,
-      targetRevenue,
+      targetRevenue: forecastRun.length > 0 ? null : targetRevenue,
     });
   }
 
-  for (const forecast of forecasts) {
+  forecastRun.forEach((forecast, index) => {
     const existing = pointsByDate.get(forecast.forecastDate);
     pointsByDate.set(forecast.forecastDate, {
       date: forecast.forecastDate,
       label: formatShortDate(forecast.forecastDate),
       actualRevenue: existing?.actualRevenue ?? null,
       forecastRevenue: forecast.predictedValue,
-      targetRevenue,
+      targetRevenue: prorateTargetRevenue(targetRevenue, index, forecastRun.length),
     });
-  }
+  });
 
   return Array.from(pointsByDate.values()).sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function getLatestForecastRun(forecasts: Forecast[]) {
+  if (forecasts.length === 0) {
+    return [];
+  }
+
+  const latestCreatedAt = forecasts.reduce((latest, forecast) =>
+    forecast.createdAt.localeCompare(latest) > 0 ? forecast.createdAt : latest,
+  forecasts[0].createdAt);
+
+  return forecasts.filter((forecast) => forecast.createdAt === latestCreatedAt);
+}
+
+function prorateTargetRevenue(targetRevenue: number | null, forecastIndex: number, forecastCount: number) {
+  if (targetRevenue === null || forecastCount <= 1) {
+    return targetRevenue;
+  }
+
+  return Math.round(targetRevenue * ((forecastIndex + 1) / forecastCount));
+}
+
+const inactiveDealStatuses = new Set(["lost", "closed_lost", "dead", "cancelled", "canceled"]);
+
+export function buildPipelineStageSeries(deals: SamplePipelineDeal[]): PipelineStagePoint[] {
+  const stageTotals = new Map<string, PipelineStagePoint>();
+
+  for (const deal of deals) {
+    if (inactiveDealStatuses.has(deal.status.toLowerCase())) {
+      continue;
+    }
+
+    const existing = stageTotals.get(deal.stage) ?? {
+      stage: deal.stage,
+      rawValue: 0,
+      weightedValue: 0,
+      dealCount: 0,
+    };
+
+    existing.rawValue += deal.value;
+    existing.weightedValue += deal.weightedValue;
+    existing.dealCount += 1;
+    stageTotals.set(deal.stage, existing);
+  }
+
+  return Array.from(stageTotals.values()).sort((left, right) => {
+    const weightedDelta = right.weightedValue - left.weightedValue;
+    if (weightedDelta !== 0) {
+      return weightedDelta;
+    }
+
+    return right.rawValue - left.rawValue;
+  });
+}
+
+function startOfWeekIso(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  const day = date.getUTCDay();
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+  date.setUTCDate(date.getUTCDate() - daysFromMonday);
+
+  return date.toISOString().slice(0, 10);
+}
+
+export function buildMarginCostSeries(
+  salesOrders: SampleSalesOrder[],
+  expenses: SampleExpense[],
+  fallbackSnapshots: MetricSnapshot[] = [],
+): MarginCostPoint[] {
+  if (salesOrders.length === 0 && expenses.length === 0) {
+    return fallbackSnapshots
+      .map((snapshot) => ({
+        date: snapshot.snapshotDate,
+        label: formatShortDate(snapshot.snapshotDate),
+        revenue: snapshot.revenue,
+        grossMargin: snapshot.grossMargin,
+        operatingCosts: snapshot.operatingCosts,
+        netContribution: snapshot.netContribution,
+      }))
+      .sort((left, right) => left.date.localeCompare(right.date));
+  }
+
+  const pointsByWeek = new Map<string, MarginCostPoint>();
+
+  function getOrCreatePoint(date: string) {
+    const weekStart = startOfWeekIso(date);
+    const existing = pointsByWeek.get(weekStart) ?? {
+      date: weekStart,
+      label: formatShortDate(weekStart),
+      revenue: 0,
+      grossMargin: 0,
+      operatingCosts: 0,
+      netContribution: 0,
+    };
+
+    pointsByWeek.set(weekStart, existing);
+    return existing;
+  }
+
+  for (const order of salesOrders) {
+    const point = getOrCreatePoint(order.orderDate);
+    point.revenue += order.revenue;
+    point.grossMargin += order.grossMargin;
+  }
+
+  for (const expense of expenses) {
+    const point = getOrCreatePoint(expense.expenseDate);
+    point.operatingCosts += expense.amount;
+  }
+
+  return Array.from(pointsByWeek.values())
+    .map((point) => ({
+      ...point,
+      netContribution: point.grossMargin - point.operatingCosts,
+    }))
+    .sort((left, right) => left.date.localeCompare(right.date));
+}
+
+export function buildCapacityRiskSeries(positions: SampleCapacityPosition[]): CapacityRiskPoint[] {
+  return positions
+    .map((position) => ({
+      label: position.resourceCode,
+      resourceName: position.resourceName,
+      quantityOnHand: position.quantityOnHand,
+      reorderPoint: position.reorderPoint,
+      reorderGap: position.quantityOnHand - position.reorderPoint,
+      leadTimeDays: position.leadTimeDays,
+    }))
+    .sort((left, right) => {
+      const gapDelta = left.reorderGap - right.reorderGap;
+      if (gapDelta !== 0) {
+        return gapDelta;
+      }
+
+      return right.leadTimeDays - left.leadTimeDays;
+    });
 }
 
 function hoursSince(value: string, now: Date) {

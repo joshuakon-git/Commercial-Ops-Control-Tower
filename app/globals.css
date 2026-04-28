@@ -425,12 +425,71 @@ select {
   margin-top: 12px;
 }
 
+.chart-switcher {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-switcher-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.segmented-control {
+  display: inline-flex;
+  min-height: 38px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.segmented-control-button {
+  min-width: 126px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 680;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.segmented-control-button:hover,
+.segmented-control-button:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+  outline: none;
+}
+
+.segmented-control-button[data-active="true"] {
+  background: var(--accent-soft);
+  color: #0b5c55;
+}
+
+.chart-mode-description {
+  max-width: 430px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: right;
+}
+
 .chart-frame {
   min-height: 360px;
   padding: 16px 0 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+}
+
+.chart-frame > .empty-panel {
+  margin: 70px 16px 0;
 }
 
 .chart-legend {
@@ -463,6 +522,35 @@ select {
 
 .chart-legend [data-series="target"]::before {
   background: var(--warning);
+}
+
+.chart-legend [data-series="raw"]::before {
+  background: #94a3b8;
+}
+
+.chart-legend [data-series="weighted"],
+.chart-legend [data-series="margin"],
+.chart-legend [data-series="quantity"] {
+  color: #47534d;
+}
+
+.chart-legend [data-series="weighted"]::before,
+.chart-legend [data-series="margin"]::before,
+.chart-legend [data-series="quantity"]::before {
+  background: var(--accent);
+}
+
+.chart-legend [data-series="revenue"]::before {
+  background: #2563eb;
+}
+
+.chart-legend [data-series="costs"]::before {
+  background: var(--warning);
+}
+
+.chart-legend [data-series="net"]::before,
+.chart-legend [data-series="reorder"]::before {
+  background: var(--danger);
 }
 
 .risk-feed {
@@ -668,6 +756,26 @@ select {
   .section-grid.two-column,
   .metric-row {
     grid-template-columns: 1fr;
+  }
+
+  .chart-switcher-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segmented-control {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .segmented-control-button {
+    min-width: 0;
+    min-height: 32px;
+  }
+
+  .chart-mode-description {
+    max-width: none;
+    text-align: left;
   }
 
   .risk-item-header {

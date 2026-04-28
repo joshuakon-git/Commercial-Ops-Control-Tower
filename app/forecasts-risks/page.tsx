@@ -1,4 +1,4 @@
-import { RevenueForecastChart } from "@/components/charts/RevenueForecastChart";
+import { ForecastRiskChartSwitcher } from "@/components/charts/ForecastRiskChartSwitcher";
 import { RiskFeed } from "@/components/risks/RiskFeed";
 import { formatCurrency } from "@/lib/formatting/currency";
 import { buildRevenueForecastSeries } from "@/lib/metrics/transforms";
@@ -6,6 +6,7 @@ import {
   getLatestRevenueForecasts,
   getOperatingRiskEvents,
   getRecentMetricSnapshots,
+  getSampleData,
 } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +21,11 @@ function riskMatches(riskType: string, terms: string[]) {
 }
 
 export default async function ForecastsRisksPage() {
-  const [snapshots, forecasts, risks] = await Promise.all([
+  const [snapshots, forecasts, risks, sampleData] = await Promise.all([
     getRecentMetricSnapshots(),
     getLatestRevenueForecasts(),
     getOperatingRiskEvents(),
+    getSampleData(),
   ]);
   const chartSeries = buildRevenueForecastSeries(snapshots, forecasts);
   const latestSnapshot = snapshots[0] ?? null;
@@ -49,12 +51,12 @@ export default async function ForecastsRisksPage() {
       <section className="workspace-section">
         <div className="section-heading">
           <div>
-            <h2>Revenue forecast</h2>
-            <p>Actual revenue, forecast revenue, and a target reference derived from forecast or metric data.</p>
+            <h2>Forecast and risk charts</h2>
+            <p>Switch between forecast pacing, pipeline quality, margin pressure, and capacity cover using the loaded data.</p>
           </div>
           <span className="tag">{latestForecast ? latestForecast.method : "No forecast"}</span>
         </div>
-        <RevenueForecastChart data={chartSeries} />
+        <ForecastRiskChartSwitcher snapshots={snapshots} forecasts={forecasts} sampleData={sampleData} />
       </section>
 
       <section className="workspace-section">

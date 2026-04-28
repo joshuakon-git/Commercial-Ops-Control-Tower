@@ -49,6 +49,31 @@ export type RevenueForecastPoint = {
   targetRevenue: number | null;
 };
 
+export type PipelineStagePoint = {
+  stage: string;
+  rawValue: number;
+  weightedValue: number;
+  dealCount: number;
+};
+
+export type MarginCostPoint = {
+  date: string;
+  label: string;
+  revenue: number;
+  grossMargin: number;
+  operatingCosts: number;
+  netContribution: number;
+};
+
+export type CapacityRiskPoint = {
+  label: string;
+  resourceName: string;
+  quantityOnHand: number;
+  reorderPoint: number;
+  reorderGap: number;
+  leadTimeDays: number;
+};
+
 export type RiskSeverity = "low" | "medium" | "high";
 export type RiskStatus = "open" | "acknowledged" | "resolved";
 
