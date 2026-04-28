@@ -6,16 +6,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
             value:
-              "frame-ancestors 'self' https://joshuakon.framer.website https://*.framer.website https://framer.website https://framer.app;",
-          },
-          {
-            key: "Cross-Origin-Resource-Policy",
-            value: "cross-origin",
+              "frame-ancestors 'self' https://*.framer.website https://framer.website https://framer.app https://*.framerusercontent.com;",
           },
         ],
       },
