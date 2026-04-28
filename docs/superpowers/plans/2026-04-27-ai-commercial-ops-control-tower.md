@@ -1052,19 +1052,19 @@ git commit -m "feat: add action automation workflow"
 - Modify: `lib/supabase/queries.ts`
 - Modify: `lib/metrics/transforms.ts`
 
-- [ ] **Step 1: Add forecast chart**
+- [x] **Step 1: Add forecast chart**
 
 Use Recharts to show actual revenue, forecast revenue, and target.
 
-- [ ] **Step 2: Add risk feed**
+- [x] **Step 2: Add risk feed**
 
 Render risk title, severity, explanation, recommended action, and status.
 
-- [ ] **Step 3: Add action table**
+- [x] **Step 3: Add action table**
 
 Render title, priority, owner, due date, status, and linked risk.
 
-- [ ] **Step 4: Populate pages**
+- [x] **Step 4: Populate pages**
 
 Map pages:
 
@@ -1083,7 +1083,7 @@ Data Health must flag:
 - Required source table has zero rows.
 - Latest AI report is older than 8 days.
 
-- [ ] **Step 5: Verify responsive layout**
+- [x] **Step 5: Verify responsive layout**
 
 Run:
 
@@ -1093,7 +1093,7 @@ npm run dev
 
 Open the local URL and check desktop and mobile widths. Text must not overlap, and dashboard pages should not look like a marketing landing page.
 
-- [ ] **Step 6: Build**
+- [x] **Step 6: Build**
 
 Run:
 
@@ -1104,7 +1104,7 @@ npm run build
 
 Expected: both pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 
