@@ -1000,7 +1000,7 @@ git commit -m "feat: add weekly AI report workflow"
 
 - Create: `workflows/local_5678_joshua_k/personal/action-automation.workflow.ts`
 
-- [ ] **Step 1: Research workflow pattern**
+- [x] **Step 1: Research workflow pattern**
 
 Run:
 
@@ -1012,7 +1012,7 @@ npx --yes n8nac skills search "slack"
 npx --yes n8nac skills search "if"
 ```
 
-- [ ] **Step 2: Build workflow**
+- [x] **Step 2: Build workflow**
 
 Create:
 
@@ -1023,7 +1023,7 @@ Manual/Schedule Trigger -> Query New High Risks -> Classify -> Insert recommende
 Use a scheduled poll for MVP instead of a database trigger.
 Resolving a risk must not automatically resolve linked actions in MVP. Actions keep their own lifecycle: `open -> in_progress -> done` or `open -> dismissed`.
 
-- [ ] **Step 3: Validate, push, verify**
+- [x] **Step 3: Validate, push, verify**
 
 Run:
 
@@ -1032,7 +1032,7 @@ npx --yes n8nac skills validate workflows/local_5678_joshua_k/personal/action-au
 npx --yes n8nac push workflows/local_5678_joshua_k/personal/action-automation.workflow.ts --verify
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
