@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "frame-ancestors 'self' https://joshuakon.framer.website https://*.framer.website https://framer.website;",
+              "frame-ancestors 'self' https://joshuakon.framer.website https://*.framer.website https://framer.website https://framer.app;",
           },
           {
             key: "Cross-Origin-Resource-Policy",
