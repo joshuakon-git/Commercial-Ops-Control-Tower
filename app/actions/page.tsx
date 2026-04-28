@@ -7,6 +7,7 @@ export default async function ActionsPage() {
   const [actions, risks] = await Promise.all([getActionQueue(), getOperatingRiskEvents()]);
   const openCount = actions.filter((action) => action.status === "open").length;
   const inProgressCount = actions.filter((action) => action.status === "in_progress").length;
+  const highPriorityOpenRiskCount = risks.filter((risk) => risk.status === "open" && risk.severity === "high").length;
 
   return (
     <>
@@ -28,7 +29,15 @@ export default async function ActionsPage() {
             {openCount} open / {inProgressCount} in progress
           </span>
         </div>
-        <ActionTable actions={actions} risks={risks} />
+        <ActionTable
+          actions={actions}
+          risks={risks}
+          emptyDetail={
+            highPriorityOpenRiskCount === 0
+              ? "No actions exist because there are no open high-priority risks. Run forecast/risk first, then action automation."
+              : "Open high-priority risks exist; run action automation to create owner follow-up."
+          }
+        />
       </section>
     </>
   );

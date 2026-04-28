@@ -21,7 +21,7 @@ export function RevenueForecastChart({ data }: RevenueForecastChartProps) {
     return (
       <div className="empty-panel">
         <strong>No revenue forecast available</strong>
-        <span>Forecast rows will appear here after the forecast and risk workflow runs.</span>
+        <span>Run forecast/risk workflow to populate projected revenue.</span>
       </div>
     );
   }

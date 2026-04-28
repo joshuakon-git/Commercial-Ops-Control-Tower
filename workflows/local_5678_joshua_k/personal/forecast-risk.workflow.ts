@@ -34,9 +34,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 @workflow({
     id: 'cQtgLAXrNmvbcbVX',
     name: 'Commercial Ops Forecast and Risk',
-    active: false,
+    active: true,
     isArchived: false,
-    settings: { executionOrder: 'v1', availableInMCP: true, callerPolicy: 'workflowsFromSameOwner' },
+    settings: {
+        executionOrder: 'v1',
+        availableInMCP: true,
+        callerPolicy: 'workflowsFromSameOwner',
+        binaryMode: 'separate',
+        timeSavedMode: 'fixed',
+    },
 })
 export class CommercialOpsForecastAndRiskWorkflow {
     // =====================================================================
@@ -286,6 +292,11 @@ const round = (value, digits = 2) => {
 };
 
 const dateOnly = (value) => String(value || '').slice(0, 10);
+const addDays = (dateValue, days) => {
+  const date = new Date(dateOnly(dateValue) + 'T00:00:00.000Z');
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
 const today = dateOnly(row.snapshot_date) || new Date().toISOString().slice(0, 10);
 const periodStart = dateOnly(row.period_start || toObject(row.current_summary).period_start);
 const periodEnd = dateOnly(row.period_end || toObject(row.current_summary).period_end);
@@ -310,24 +321,25 @@ const projectedRevenue = round(averageWeeklyRevenue * 4);
 const lowerBound = round(Math.min(...weeklyValues) * 4);
 const upperBound = round(Math.max(...weeklyValues) * 4);
 
-const forecast = {
-  forecast_date: today,
+const forecasts = [1, 2, 3, 4].map((horizonWeeks) => ({
+  forecast_date: addDays(today, (horizonWeeks - 1) * 7),
   forecast_type: 'revenue',
   period_start: periodStart,
   period_end: periodEnd,
-  predicted_value: projectedRevenue,
-  lower_bound: lowerBound,
-  upper_bound: upperBound,
+  predicted_value: round(averageWeeklyRevenue * horizonWeeks),
+  lower_bound: round(Math.min(...weeklyValues) * horizonWeeks),
+  upper_bound: round(Math.max(...weeklyValues) * horizonWeeks),
   method: 'four_week_average',
   inputs_summary: {
     weekly_revenue: weeklyValues,
     weeks_observed: weeklyValues.length,
+    horizon_weeks: horizonWeeks,
     average_weekly_revenue: averageWeeklyRevenue,
     current_revenue: round(currentSummary.revenue),
     target_revenue: round(currentTarget.revenue_target),
     reference: 'services/forecasting/forecast.py'
   }
-};
+}));
 
 const risks = [];
 const addRisk = (risk) => {
@@ -358,8 +370,8 @@ if (revenueTarget > 0) {
 const currentMarginPct = toNumber(currentSummary.gross_margin_pct);
 const previousMarginPct = toNumber(previousSummary.gross_margin_pct);
 const marginDrop = previousMarginPct - currentMarginPct;
-if (marginDrop >= 0.05) {
-  const threshold = round(previousMarginPct - 0.05, 2);
+if (marginDrop >= 0.04) {
+  const threshold = round(previousMarginPct - 0.04, 2);
   const dropPoints = round(marginDrop * 100, 1);
   addRisk({
     risk_type: 'margin_drop',
@@ -459,7 +471,7 @@ return [{
     snapshot_date: today,
     period_start: periodStart,
     period_end: periodEnd,
-    forecasts: [forecast],
+    forecasts,
     risks,
     risk_types: risks.map((risk) => risk.risk_type),
     summary: {
@@ -650,9 +662,9 @@ SELECT
   '{{ $("Upsert Risk Events").item.json.risks_updated }}'::int AS risks_updated,
   '{{ $("Upsert Risk Events").item.json.risks_inserted }}'::int AS risks_inserted,
   '{{ $("Upsert Risk Events").item.json.risk_types }}' AS risk_types,
-  '{{ $("Upsert Risk Events").item.json.snapshot_date }}'::date AS snapshot_date,
-  '{{ $("Upsert Risk Events").item.json.period_start }}'::date AS period_start,
-  '{{ $("Upsert Risk Events").item.json.period_end }}'::date AS period_end
+  '{{ new Date($("Upsert Risk Events").item.json.snapshot_date).toISOString().slice(0, 10) }}'::date AS snapshot_date,
+  '{{ new Date($("Upsert Risk Events").item.json.period_start).toISOString().slice(0, 10) }}'::date AS period_start,
+  '{{ new Date($("Upsert Risk Events").item.json.period_end).toISOString().slice(0, 10) }}'::date AS period_end
 FROM inserted;`,
         options: {},
     };

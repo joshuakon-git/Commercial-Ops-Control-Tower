@@ -4,6 +4,7 @@ import type { RecommendedAction, RiskEvent } from "@/lib/metrics/types";
 type ActionTableProps = {
   actions: RecommendedAction[];
   risks?: RiskEvent[];
+  emptyDetail?: string;
 };
 
 function getRiskLabel(action: RecommendedAction, riskById: Map<string, RiskEvent>) {
@@ -14,14 +15,14 @@ function getRiskLabel(action: RecommendedAction, riskById: Map<string, RiskEvent
   return riskById.get(action.riskEventId)?.title ?? `Risk ${action.riskEventId.slice(0, 8)}`;
 }
 
-export function ActionTable({ actions, risks = [] }: ActionTableProps) {
+export function ActionTable({ actions, risks = [], emptyDetail }: ActionTableProps) {
   const riskById = new Map(risks.map((risk) => [risk.id, risk]));
 
   if (actions.length === 0) {
     return (
       <div className="empty-panel">
         <strong>No recommended actions</strong>
-        <span>Action automation will add owner follow-up as risks are detected.</span>
+        <span>{emptyDetail ?? "Action automation will add owner follow-up as risks are detected."}</span>
       </div>
     );
   }

@@ -2,7 +2,7 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 
 // <workflow-map>
 // Workflow : Commercial Ops Weekly AI Report
-// Nodes   : 11  |  Connections: 10
+// Nodes   : 13  |  Connections: 10
 //
 // NODE INDEX
 // ──────────────────────────────────────────────────────────────────
@@ -10,7 +10,6 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // ManualDemoTrigger                  manualTrigger
 // WeeklyMondaySchedule               scheduleTrigger
 // PullStructuredPayload              postgres                   [creds]
-// OpenaiJsonSummary                  openAi                     [creds]
 // ValidateJson                       code
 // JsonIsValid                        if
 // SaveAiReports                      postgres                   [creds]
@@ -18,12 +17,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 // WriteActionLog                     postgres                   [creds]
 // LogInvalidAiResponse               postgres                   [creds]
 // FailInvalidAiResponse              code
+// BasicLlmChain                      chainLlm                   [AI]
+// OpenaiChatModel                    lmChatOpenAi               [creds] [ai_languageModel]
+// StructuredOutputParser             outputParserStructured     [ai_outputParser]
 //
 // ROUTING MAP
 // ──────────────────────────────────────────────────────────────────
 // ManualDemoTrigger
 //    → PullStructuredPayload
-//      → OpenaiJsonSummary
+//      → BasicLlmChain
 //        → ValidateJson
 //          → JsonIsValid
 //            → SaveAiReports
@@ -33,6 +35,9 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 //              → FailInvalidAiResponse
 // WeeklyMondaySchedule
 //    → PullStructuredPayload (↩ loop)
+//
+// AI CONNECTIONS
+// BasicLlmChain.uses({ ai_languageModel: OpenaiChatModel, ai_outputParser: StructuredOutputParser })
 // </workflow-map>
 
 // =====================================================================
@@ -42,9 +47,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 @workflow({
     id: 'NwsCx9dJMP1uOYOc',
     name: 'Commercial Ops Weekly AI Report',
-    active: false,
+    active: true,
     isArchived: false,
-    settings: { executionOrder: 'v1', availableInMCP: true, callerPolicy: 'workflowsFromSameOwner' },
+    settings: {
+        executionOrder: 'v1',
+        availableInMCP: true,
+        callerPolicy: 'workflowsFromSameOwner',
+        binaryMode: 'separate',
+        timeSavedMode: 'fixed',
+    },
 })
 export class CommercialOpsWeeklyAiReportWorkflow {
     // =====================================================================
@@ -72,10 +83,8 @@ export class CommercialOpsWeeklyAiReportWorkflow {
             interval: [
                 {
                     field: 'weeks',
-                    weeksInterval: 1,
-                    triggerAtDay: '1',
-                    triggerAtHour: '9',
-                    triggerAtMinute: 0,
+                    triggerAtDay: [],
+                    triggerAtHour: 9,
                 },
             ],
         },
@@ -97,7 +106,7 @@ export class CommercialOpsWeeklyAiReportWorkflow {
         },
         table: {
             mode: 'list',
-            value: 'ai_reports',
+            value: 'metric_snapshots',
         },
         query: `WITH bounds AS (
   SELECT
@@ -173,42 +182,21 @@ SELECT
   bounds.report_period_start,
   bounds.report_period_end,
   jsonb_build_object(
+    'kpi_digest', jsonb_build_object(
+      'revenue', COALESCE(((SELECT payload FROM latest_metrics)->>'revenue')::numeric, 0),
+      'gross_margin', COALESCE(((SELECT payload FROM latest_metrics)->>'gross_margin')::numeric, 0),
+      'operating_costs', COALESCE(((SELECT payload FROM latest_metrics)->>'operating_costs')::numeric, 0),
+      'net_contribution', COALESCE(((SELECT payload FROM latest_metrics)->>'net_contribution')::numeric, 0),
+      'pipeline_coverage', COALESCE(((SELECT payload FROM latest_metrics)->>'pipeline_coverage')::numeric, 0),
+      'cash_pressure', COALESCE(((SELECT payload FROM latest_metrics)->>'cash_pressure_score')::numeric, 0),
+      'stock_risk_count', COALESCE(((SELECT payload FROM latest_metrics)->>'stock_risk_count')::int, 0)
+    ),
     'latest_metrics', COALESCE((SELECT payload FROM latest_metrics), '{}'::jsonb),
     'forecasts', COALESCE((SELECT payload FROM recent_forecasts), '[]'::jsonb),
     'open_risks', COALESCE((SELECT payload FROM open_risks), '[]'::jsonb),
     'recommended_actions', COALESCE((SELECT payload FROM open_actions), '[]'::jsonb)
   ) AS prompt_payload
 FROM bounds;`,
-        options: {},
-    };
-
-    @node({
-        id: '61ac9da1-4af7-4404-af86-d22d918803f5',
-        name: 'OpenAI JSON Summary',
-        type: 'n8n-nodes-base.openAi',
-        version: 1.1,
-        position: [608, 128],
-        credentials: { openAiApi: { id: 'k6iDtzHJ97j20t2X', name: 'OpenAi account 2' } },
-    })
-    OpenaiJsonSummary = {
-        resource: 'chat',
-        operation: 'complete',
-        chatModel: 'gpt-4o-mini',
-        prompt: {
-            messages: [
-                {
-                    role: 'system',
-                    content:
-                        'You are an operations analyst for a small business. Use only the supplied structured metrics, forecasts, risk events, and recommended actions. Do not invent causes, figures, or actions that are not supported by the payload. Return valid JSON only.',
-                },
-                {
-                    role: 'user',
-                    content:
-                        "={{ 'Create a weekly commercial ops report for ' + $json.report_period_start + ' through ' + $json.report_period_end + '. The payload has exactly these top-level keys: latest_metrics, forecasts, open_risks, recommended_actions. Do not request or infer raw operational tables. Return only a JSON object with these string fields: summary, what_changed, needs_attention, likely_causes, recommended_actions, next_7_days_priorities, slack_text. Payload: ' + JSON.stringify($json.prompt_payload) }}",
-                },
-            ],
-        },
-        simplifyOutput: true,
         options: {},
     };
 
@@ -220,9 +208,7 @@ FROM bounds;`,
         position: [912, 128],
     })
     ValidateJson = {
-        mode: 'runOnceForAllItems',
-        language: 'javaScript',
-        jsCode: `const requiredFields = [
+        jsCode: `const requiredTextFields = [
   'summary',
   'what_changed',
   'needs_attention',
@@ -260,20 +246,46 @@ function cleanJsonText(text) {
   return cleaned;
 }
 
+const requiredKpiFields = [
+  'revenue',
+  'gross_margin',
+  'operating_costs',
+  'net_contribution',
+  'pipeline_coverage',
+  'cash_pressure',
+  'stock_risk_count'
+];
+
 const raw_response = extractText(input);
 const cleaned = cleanJsonText(raw_response);
 
 try {
-  const parsed = JSON.parse(cleaned);
-  const invalidFields = requiredFields.filter((field) => (
+  const parsed = (() => {
+    if (input && typeof input.output === 'object' && !Array.isArray(input.output)) return input.output;
+    if (input && typeof input === 'object' && requiredTextFields.some((field) => field in input)) return input;
+    return JSON.parse(cleaned);
+  })();
+  const invalidFields = requiredTextFields.filter((field) => (
     typeof parsed[field] !== 'string' || parsed[field].trim().length === 0
   ));
+  const kpiDigest = parsed.kpi_digest;
+  const invalidKpiFields = !kpiDigest || typeof kpiDigest !== 'object' || Array.isArray(kpiDigest)
+    ? requiredKpiFields
+    : requiredKpiFields.filter((field) => (
+        !(
+          typeof kpiDigest[field] === 'number' ||
+          (typeof kpiDigest[field] === 'string' && kpiDigest[field].trim().length > 0)
+        )
+      ));
 
-  if (invalidFields.length > 0) {
+  if (invalidFields.length > 0 || invalidKpiFields.length > 0) {
     return [{
       json: {
         is_valid: false,
-        validation_error: 'OpenAI JSON is missing required non-empty string fields: ' + invalidFields.join(', '),
+        validation_error: [
+          invalidFields.length > 0 ? 'missing text fields: ' + invalidFields.join(', ') : '',
+          invalidKpiFields.length > 0 ? 'missing KPI digest fields: ' + invalidKpiFields.join(', ') : ''
+        ].filter(Boolean).join('; '),
         raw_response
       }
     }];
@@ -283,7 +295,8 @@ try {
     json: {
       is_valid: true,
       model: 'gpt-4o-mini',
-      ...Object.fromEntries(requiredFields.map((field) => [field, parsed[field].trim()])),
+      kpi_digest: kpiDigest,
+      ...Object.fromEntries(requiredTextFields.map((field) => [field, parsed[field].trim()])),
       raw_response
     }
   }];
@@ -362,8 +375,8 @@ try {
   input_payload
 )
 VALUES (
-  '{{ $("Pull Structured Payload").item.json.report_period_start }}'::date,
-  '{{ $("Pull Structured Payload").item.json.report_period_end }}'::date,
+  '{{ new Date($("Pull Structured Payload").item.json.report_period_start).toISOString().slice(0, 10) }}'::date,
+  '{{ new Date($("Pull Structured Payload").item.json.report_period_end).toISOString().slice(0, 10) }}'::date,
   '{{ $json.summary.replace(/'/g, "''") }}',
   '{{ $json.what_changed.replace(/'/g, "''") }}',
   '{{ $json.needs_attention.replace(/'/g, "''") }}',
@@ -372,7 +385,7 @@ VALUES (
   '{{ $json.next_7_days_priorities.replace(/'/g, "''") }}',
   '{{ $json.slack_text.replace(/'/g, "''") }}',
   '{{ $json.model }}',
-  '{{ JSON.stringify($("Pull Structured Payload").item.json.prompt_payload).replace(/'/g, "''") }}'::jsonb
+  '{{ JSON.stringify({ prompt_payload: $("Pull Structured Payload").item.json.prompt_payload, kpi_digest: $json.kpi_digest }).replace(/'/g, "''") }}'::jsonb
 )
 RETURNING
   id::text AS ai_report_id,
@@ -387,21 +400,21 @@ RETURNING
 
     @node({
         id: '32561387-aa00-406c-b6e2-d90829c99323',
+        webhookId: 'd7bbb171-21e2-4cbc-ad00-673fb24c99fa',
         name: 'Send Slack',
         type: 'n8n-nodes-base.slack',
         version: 2.4,
         position: [1824, 48],
-        credentials: { slackApi: { id: 'gebE7pIXkCFMMbOP', name: 'Slack account- portfolio' } },
+        credentials: { slackApi: { id: 'srDmrGcvye5bj6tY', name: 'AI Commercial Ops Bot' } },
     })
     SendSlack = {
-        text: '={{ $json.slack_text }}',
         select: 'channel',
         channelId: {
             __rl: true,
+            value: 'C0B07SU1G93',
             mode: 'id',
-            value: '={{ $env.SLACK_CHANNEL_ID }}',
-            cachedResultName: 'SLACK_CHANNEL_ID',
         },
+        text: '={{ $json.slack_text }}',
         otherOptions: {},
     };
 
@@ -507,10 +520,157 @@ RETURNING
         position: [1824, 256],
     })
     FailInvalidAiResponse = {
-        mode: 'runOnceForAllItems',
-        language: 'javaScript',
         jsCode: `const error = $input.first().json.validation_error || 'OpenAI returned invalid report JSON';
 throw new Error(error);`,
+    };
+
+    @node({
+        id: 'a2a5403b-8679-48f1-a3cd-0c83e6878408',
+        name: 'Basic LLM Chain',
+        type: '@n8n/n8n-nodes-langchain.chainLlm',
+        version: 1.9,
+        position: [544, 112],
+    })
+    BasicLlmChain = {
+        promptType: 'define',
+        prompt: '={{ JSON.stringify($json.prompt_payload) }}',
+        text: "={{ 'Create a weekly commercial ops report for ' + $json.report_period_start + ' through ' + $json.report_period_end + '. The payload has exactly these top-level keys: kpi_digest, latest_metrics, forecasts, open_risks, recommended_actions. Do not request or infer raw operational tables. Return only a JSON object with a top-level kpi_digest object and these exact non-empty string fields: summary, what_changed, needs_attention, likely_causes, recommended_actions, next_7_days_priorities, slack_text. kpi_digest must cover revenue, gross_margin, operating_costs, net_contribution, pipeline_coverage, cash_pressure, and stock_risk_count. slack_text must be a concise but substantial weekly overview with the KPI digest, what changed, attention items, and next actions. If recommended_actions is an empty array, recommended_actions must still be a non-empty sentence explaining that no system-generated actions are currently queued and naming the best next operating review. Payload: ' + JSON.stringify($json.prompt_payload) }}",
+        hasOutputParser: true,
+        messages: {
+            messageValues: [
+                {
+                    type: 'SystemMessagePromptTemplate',
+                    messageType: 'text',
+                    message:
+                        'You are an operations analyst for a small business. Use only the supplied structured metrics, forecasts, risk events, and recommended actions. Do not invent causes, figures, or actions that are not supported by the payload. Return valid JSON only. The KPI digest must be explicit, and slack_text must be useful for an operator skimming Slack, not a vague one-liner.',
+                },
+            ],
+        },
+        batching: {},
+    };
+
+    @node({
+        id: 'fdf7b092-c7ad-4fed-bc4d-0530f91bc0b4',
+        name: 'OpenAI Chat Model',
+        type: '@n8n/n8n-nodes-langchain.lmChatOpenAi',
+        version: 1.3,
+        position: [512, 336],
+        credentials: { openAiApi: { id: 'k6iDtzHJ97j20t2X', name: 'OpenAi account 2' } },
+    })
+    OpenaiChatModel = {
+        model: {
+            __rl: true,
+            value: 'gpt-4o-mini',
+            mode: 'list',
+            cachedResultName: 'gpt-4o-mini',
+        },
+        builtInTools: {},
+        options: {},
+    };
+
+    @node({
+        id: 'b79931a4-ccfb-4cff-869c-af5a08d79ee7',
+        name: 'Structured Output Parser',
+        type: '@n8n/n8n-nodes-langchain.outputParserStructured',
+        version: 1.3,
+        position: [784, 336],
+    })
+    StructuredOutputParser = {
+        schemaType: 'manual',
+        inputSchema: `{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kpi_digest",
+    "summary",
+    "what_changed",
+    "needs_attention",
+    "likely_causes",
+    "recommended_actions",
+    "next_7_days_priorities",
+    "slack_text"
+  ],
+  "properties": {
+    "kpi_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revenue",
+        "gross_margin",
+        "operating_costs",
+        "net_contribution",
+        "pipeline_coverage",
+        "cash_pressure",
+        "stock_risk_count"
+      ],
+      "properties": {
+        "revenue": {
+          "type": "string",
+          "description": "Revenue status using supplied values."
+        },
+        "gross_margin": {
+          "type": "string",
+          "description": "Gross margin status using supplied values."
+        },
+        "operating_costs": {
+          "type": "string",
+          "description": "Operating cost status using supplied values."
+        },
+        "net_contribution": {
+          "type": "string",
+          "description": "Net contribution status using supplied values."
+        },
+        "pipeline_coverage": {
+          "type": "string",
+          "description": "Pipeline coverage status using supplied values."
+        },
+        "cash_pressure": {
+          "type": "string",
+          "description": "Cash pressure status using supplied values."
+        },
+        "stock_risk_count": {
+          "type": "string",
+          "description": "Stock risk count status using supplied values."
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "One non-empty sentence summarizing the commercial operating picture.",
+      "minLength": 1
+    },
+    "what_changed": {
+      "type": "string",
+      "description": "One non-empty sentence describing the most important change in the supplied data.",
+      "minLength": 1
+    },
+    "needs_attention": {
+      "type": "string",
+      "description": "One non-empty sentence naming what needs operator attention.",
+      "minLength": 1
+    },
+    "likely_causes": {
+      "type": "string",
+      "description": "One non-empty sentence explaining likely causes supported by the supplied data.",
+      "minLength": 1
+    },
+    "recommended_actions": {
+      "type": "string",
+      "description": "One non-empty sentence with recommended actions. If the recommended_actions input array is empty, say no system-generated actions are currently queued and recommend the next operating review step.",
+      "minLength": 1
+    },
+    "next_7_days_priorities": {
+      "type": "string",
+      "description": "One non-empty sentence listing priorities for the next seven days.",
+      "minLength": 1
+    },
+    "slack_text": {
+      "type": "string",
+      "description": "Concise but substantial Slack-ready weekly overview covering KPI digest, changes, attention items, actions, and next seven day priorities.",
+      "minLength": 120
+    }
+  }
+}`,
     };
 
     // =====================================================================
@@ -521,13 +681,18 @@ throw new Error(error);`,
     defineRouting() {
         this.ManualDemoTrigger.out(0).to(this.PullStructuredPayload.in(0));
         this.WeeklyMondaySchedule.out(0).to(this.PullStructuredPayload.in(0));
-        this.PullStructuredPayload.out(0).to(this.OpenaiJsonSummary.in(0));
-        this.OpenaiJsonSummary.out(0).to(this.ValidateJson.in(0));
+        this.PullStructuredPayload.out(0).to(this.BasicLlmChain.in(0));
         this.ValidateJson.out(0).to(this.JsonIsValid.in(0));
         this.JsonIsValid.out(0).to(this.SaveAiReports.in(0));
         this.JsonIsValid.out(1).to(this.LogInvalidAiResponse.in(0));
         this.SaveAiReports.out(0).to(this.SendSlack.in(0));
         this.SendSlack.out(0).to(this.WriteActionLog.in(0));
         this.LogInvalidAiResponse.out(0).to(this.FailInvalidAiResponse.in(0));
+        this.BasicLlmChain.out(0).to(this.ValidateJson.in(0));
+
+        this.BasicLlmChain.uses({
+            ai_languageModel: this.OpenaiChatModel.output,
+            ai_outputParser: this.StructuredOutputParser.output,
+        });
     }
 }

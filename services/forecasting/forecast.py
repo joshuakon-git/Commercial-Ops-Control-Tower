@@ -21,6 +21,15 @@ def forecast_revenue(weekly_revenue: list[float]) -> dict:
         "inputs_summary": {
             "weekly_revenue": values,
         },
+        "forecast_points": [
+            {
+                "horizon_weeks": horizon,
+                "predicted_value": round(average_weekly * horizon, 2),
+                "lower_bound": round(min(values) * horizon, 2),
+                "upper_bound": round(max(values) * horizon, 2),
+            }
+            for horizon in range(1, 5)
+        ],
     }
 
 
@@ -52,10 +61,10 @@ def detect_revenue_pacing(projected: float, target: float) -> dict | None:
 
 def detect_margin_drop(current_pct: float, previous_pct: float) -> dict | None:
     drop = previous_pct - current_pct
-    if drop < 0.05:
+    if drop < 0.04:
         return None
 
-    threshold = round(previous_pct - 0.05, 2)
+    threshold = round(previous_pct - 0.04, 2)
     drop_points = round(drop * 100, 1)
     return {
         "risk_type": "margin_drop",

@@ -339,6 +339,20 @@ function readNumericInput(summary: Record<string, unknown>, keys: string[]) {
   return null;
 }
 
+const expectedDemoRiskTypes = [
+  "revenue_pacing",
+  "margin_drop",
+  "stockout_risk",
+  "deal_slippage",
+  "expense_pressure",
+] as const;
+
+export function getMissingDemoRiskTypes(risks: Pick<RiskEvent, "riskType">[]) {
+  const presentTypes = new Set(risks.map((risk) => risk.riskType));
+
+  return expectedDemoRiskTypes.filter((riskType) => !presentTypes.has(riskType));
+}
+
 function deriveTargetRevenue(snapshots: MetricSnapshot[], forecasts: Forecast[]) {
   const explicitTarget = forecasts
     .map((forecast) =>

@@ -24,6 +24,12 @@ def test_forecast_revenue_projects_four_weeks_from_recent_average():
         "inputs_summary": {
             "weekly_revenue": [10_000.0, 12_000.0, 11_000.0, 13_000.0],
         },
+        "forecast_points": [
+            {"horizon_weeks": 1, "predicted_value": 11_500.0, "lower_bound": 10_000.0, "upper_bound": 13_000.0},
+            {"horizon_weeks": 2, "predicted_value": 23_000.0, "lower_bound": 20_000.0, "upper_bound": 26_000.0},
+            {"horizon_weeks": 3, "predicted_value": 34_500.0, "lower_bound": 30_000.0, "upper_bound": 39_000.0},
+            {"horizon_weeks": 4, "predicted_value": 46_000.0, "lower_bound": 40_000.0, "upper_bound": 52_000.0},
+        ],
     }
 
 
@@ -55,11 +61,20 @@ def test_detect_margin_drop_returns_medium_risk_for_five_point_decline():
         "severity": "medium",
         "metric_name": "gross_margin_pct",
         "metric_value": 0.37,
-        "threshold_value": 0.38,
+        "threshold_value": 0.39,
         "title": "Gross margin percentage dropped",
         "explanation": "Gross margin fell by 6.0 percentage points from 43.0% to 37.0%.",
         "recommended_action": "Inspect discounts, product mix, and unit costs before approving new promotions.",
     }
+
+
+def test_detect_margin_drop_returns_medium_risk_for_seeded_demo_decline():
+    risk = detect_margin_drop(current_pct=0.429, previous_pct=0.4763)
+
+    assert risk is not None
+    assert risk["risk_type"] == "margin_drop"
+    assert risk["metric_value"] == 0.43
+    assert risk["threshold_value"] == 0.44
 
 
 def test_detect_expense_pressure_returns_medium_risk_when_expenses_outgrow_revenue():

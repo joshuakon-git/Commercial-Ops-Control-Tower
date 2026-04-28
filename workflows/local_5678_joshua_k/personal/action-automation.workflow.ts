@@ -41,9 +41,15 @@ import { workflow, node, links } from '@n8n-as-code/transformer';
 @workflow({
     id: 'zLSmXRKeh51hJjhO',
     name: 'Commercial Ops Action Automation',
-    active: false,
+    active: true,
     isArchived: false,
-    settings: { executionOrder: 'v1', availableInMCP: true, callerPolicy: 'workflowsFromSameOwner' },
+    settings: {
+        executionOrder: 'v1',
+        availableInMCP: true,
+        callerPolicy: 'workflowsFromSameOwner',
+        binaryMode: 'separate',
+        timeSavedMode: 'fixed',
+    },
 })
 export class CommercialOpsActionAutomationWorkflow {
     // =====================================================================
@@ -71,7 +77,6 @@ export class CommercialOpsActionAutomationWorkflow {
             interval: [
                 {
                     field: 'hours',
-                    hoursInterval: 1,
                 },
             ],
         },
@@ -153,8 +158,6 @@ FROM pending_risks;`,
         position: [608, 128],
     })
     ClassifyActions = {
-        mode: 'runOnceForAllItems',
-        language: 'javaScript',
         jsCode: `const input = $input.first().json;
 
 function parseJsonArray(value) {
@@ -369,6 +372,7 @@ FROM inserted;`,
 
     @node({
         id: '7d65f1d6-d442-4db0-a506-46252d931b8d',
+        webhookId: 'dae41a34-c6d2-452a-b245-3ae5013b9de0',
         name: 'Send Slack Alert',
         type: 'n8n-nodes-base.slack',
         version: 2.4,
@@ -376,16 +380,13 @@ FROM inserted;`,
         credentials: { slackApi: { id: 'gebE7pIXkCFMMbOP', name: 'Slack account- portfolio' } },
     })
     SendSlackAlert = {
-        resource: 'message',
-        operation: 'post',
-        text: '={{ $json.slack_text }}',
         select: 'channel',
         channelId: {
             __rl: true,
             mode: 'id',
-            value: '={{ $env.SLACK_CHANNEL_ID }}',
-            cachedResultName: 'SLACK_CHANNEL_ID',
+            value: 'C0B07SU1G93',
         },
+        text: '={{ $json.slack_text }}',
         otherOptions: {},
     };
 
@@ -440,7 +441,7 @@ RETURNING
         name: 'Log No Actions',
         type: 'n8n-nodes-base.postgres',
         version: 2.6,
-        position: [1216, 304],
+        position: [1376, 336],
         credentials: { postgres: { id: 'cjKLi4kH3enKNzgh', name: 'AI Commercial Ops Control Tower' } },
     })
     LogNoActions = {

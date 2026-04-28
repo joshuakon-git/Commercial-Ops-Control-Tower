@@ -2,7 +2,7 @@ import { ActionTable } from "@/components/actions/ActionTable";
 import { KpiTile } from "@/components/kpi/KpiTile";
 import { RiskFeed } from "@/components/risks/RiskFeed";
 import { formatShortDate } from "@/lib/formatting/dates";
-import { buildKpiTiles } from "@/lib/metrics/transforms";
+import { buildKpiTiles, getMissingDemoRiskTypes } from "@/lib/metrics/transforms";
 import {
   getLatestAiReport,
   getLatestImports,
@@ -24,6 +24,7 @@ export default async function DashboardPage() {
   const kpiTiles = buildKpiTiles(snapshot, latestImports);
   const urgentRisks = riskEvents.filter((risk) => risk.status === "open").slice(0, 3);
   const recentActions = recommendedActions.slice(0, 4);
+  const missingDemoRiskTypes = getMissingDemoRiskTypes(riskEvents);
 
   return (
     <>
@@ -85,6 +86,15 @@ export default async function DashboardPage() {
             </div>
           </div>
           <RiskFeed risks={urgentRisks} emptyLabel="No open risks" />
+          {missingDemoRiskTypes.length > 0 ? (
+            <div className="empty-panel compact">
+              <strong>Demo risk state incomplete</strong>
+              <span>
+                Expected seeded risks are missing: {missingDemoRiskTypes.join(", ")}. Run daily metrics,
+                forecast/risk, then action automation.
+              </span>
+            </div>
+          ) : null}
         </section>
       </div>
 
@@ -96,7 +106,11 @@ export default async function DashboardPage() {
           </div>
           <span className="tag">{recentActions.length} active</span>
         </div>
-        <ActionTable actions={recentActions} risks={riskEvents} />
+        <ActionTable
+          actions={recentActions}
+          risks={riskEvents}
+          emptyDetail="No actions exist because there are no open high-priority risks, or action automation has not run after forecast/risk."
+        />
       </section>
     </>
   );

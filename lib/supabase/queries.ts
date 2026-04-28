@@ -212,12 +212,20 @@ export async function getLatestRevenueForecasts(
     .from("forecasts")
     .select("*")
     .eq("forecast_type", "revenue")
-    .order("forecast_date", { ascending: true })
+    .order("forecast_date", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(8);
 
-  return unwrapRows(result, "Unable to load revenue forecasts").map((row) =>
-    normalizeForecast(row as Parameters<typeof normalizeForecast>[0]),
-  );
+  return unwrapRows(result, "Unable to load revenue forecasts")
+    .map((row) => normalizeForecast(row as Parameters<typeof normalizeForecast>[0]))
+    .sort((left, right) => {
+      const dateDelta = left.forecastDate.localeCompare(right.forecastDate);
+      if (dateDelta !== 0) {
+        return dateDelta;
+      }
+
+      return left.createdAt.localeCompare(right.createdAt);
+    });
 }
 
 export async function getLatestWorkflowRun(
