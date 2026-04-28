@@ -1,4 +1,5 @@
 import type { RiskEvent } from "@/lib/metrics/types";
+import { formatCurrencyAmountsInText } from "@/lib/formatting/currency";
 
 type RiskFeedProps = {
   risks: RiskEvent[];
@@ -21,7 +22,7 @@ export function RiskFeed({ risks, emptyLabel = "No operating risks" }: RiskFeedP
           <div className="risk-item-header">
             <div>
               <h3>{risk.title}</h3>
-              <p>{risk.explanation}</p>
+              <p>{formatCurrencyAmountsInText(risk.explanation)}</p>
             </div>
             <div className="risk-badges">
               <span className="tag">{risk.severity}</span>
@@ -30,7 +31,7 @@ export function RiskFeed({ risks, emptyLabel = "No operating risks" }: RiskFeedP
           </div>
           <div className="risk-action">
             <strong>Recommended action</strong>
-            <span>{risk.recommendedAction}</span>
+            <span>{formatCurrencyAmountsInText(risk.recommendedAction)}</span>
           </div>
         </article>
       ))}

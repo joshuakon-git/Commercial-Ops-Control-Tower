@@ -1,6 +1,7 @@
 import { ActionTable } from "@/components/actions/ActionTable";
 import { KpiTile } from "@/components/kpi/KpiTile";
 import { RiskFeed } from "@/components/risks/RiskFeed";
+import { formatCurrencyAmountsInText } from "@/lib/formatting/currency";
 import { formatShortDate } from "@/lib/formatting/dates";
 import { buildKpiTiles, getMissingDemoRiskTypes } from "@/lib/metrics/transforms";
 import {
@@ -62,12 +63,12 @@ export default async function DashboardPage() {
           {aiReport ? (
             <div className="status-list">
               <div className="status-row">
-                <strong>{aiReport.summary}</strong>
+                <strong>{formatCurrencyAmountsInText(aiReport.summary)}</strong>
                 <span>{formatShortDate(aiReport.createdAt)}</span>
               </div>
               <div className="status-row">
                 <strong>Needs attention</strong>
-                <span>{aiReport.needsAttention}</span>
+                <span>{formatCurrencyAmountsInText(aiReport.needsAttention)}</span>
               </div>
             </div>
           ) : (

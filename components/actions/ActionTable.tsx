@@ -1,3 +1,4 @@
+import { formatCurrencyAmountsInText } from "@/lib/formatting/currency";
 import { formatShortDate } from "@/lib/formatting/dates";
 import type { RecommendedAction, RiskEvent } from "@/lib/metrics/types";
 
@@ -44,8 +45,8 @@ export function ActionTable({ actions, risks = [], emptyDetail }: ActionTablePro
           {actions.map((action) => (
             <tr key={action.id}>
               <td>
-                <strong>{action.title}</strong>
-                <span>{action.description}</span>
+                <strong>{formatCurrencyAmountsInText(action.title)}</strong>
+                <span>{formatCurrencyAmountsInText(action.description)}</span>
               </td>
               <td>
                 <span className={`priority-pill ${action.priority}`}>{action.priority}</span>
@@ -53,7 +54,7 @@ export function ActionTable({ actions, risks = [], emptyDetail }: ActionTablePro
               <td>{action.owner ?? "Unassigned"}</td>
               <td>{action.dueDate ? formatShortDate(action.dueDate) : "No due date"}</td>
               <td>{action.status.replaceAll("_", " ")}</td>
-              <td>{getRiskLabel(action, riskById)}</td>
+              <td>{formatCurrencyAmountsInText(getRiskLabel(action, riskById))}</td>
             </tr>
           ))}
         </tbody>
