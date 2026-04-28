@@ -11,18 +11,18 @@
       "filename": "daily-metrics.workflow.ts"
     },
     "cQtgLAXrNmvbcbVX": {
-      "lastSyncedHash": "c6d3e84a07ca0fb14e83d606dd337d64c33ed42d6e29bbb199bf9143713c7c5a",
-      "lastSyncedAt": "2026-04-27T21:05:51.000Z",
+      "lastSyncedHash": "41e505ba3fb274408cabcd24146e5bb3bb30c7aec0ea7a11d29fc0390549b86c",
+      "lastSyncedAt": "2026-04-28T11:09:11.741Z",
       "filename": "forecast-risk.workflow.ts"
     },
     "NwsCx9dJMP1uOYOc": {
-      "lastSyncedHash": "b1c0cad525dfb3bee500893c23bbe213f5cdd85775d10210ec358243d1e06afb",
-      "lastSyncedAt": "2026-04-27T21:19:39.788Z",
+      "lastSyncedHash": "c8cc406c1db1c5c8f4d56d8211e8d536d960aaa9bc33c06d05a0dab3d6ca5dd7",
+      "lastSyncedAt": "2026-04-28T11:04:49.346Z",
       "filename": "weekly-ai-report.workflow.ts"
     },
     "zLSmXRKeh51hJjhO": {
-      "lastSyncedHash": "20202aefe10d3c59251ffe1ce246766de6213c3949c11368fc7af7a515ffa678",
-      "lastSyncedAt": "2026-04-28T09:10:04.204Z",
+      "lastSyncedHash": "5c98d515bd7bd2badcda30cb697bc2785076c776ab3a378df9732208692de151",
+      "lastSyncedAt": "2026-04-28T11:07:20.412Z",
       "filename": "action-automation.workflow.ts"
     }
   }

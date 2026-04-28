@@ -4,7 +4,35 @@ AI Commercial Ops Control Tower is a portfolio Next.js, Supabase, and n8n applic
 
 The project is designed as a public technical showcase: the data is safe demo data, the operating logic is explainable, and each dashboard view can be traced back to Supabase records and n8n workflow outputs.
 
-## Why It Matters
+### Overview
+
+![Dashboard overview](assets/screenshots/dashboard.png)
+
+### Forecasts & Risks
+
+![Forecasts and risks dashboard](assets/screenshots/forecasts-risks.png)
+
+### Actions
+
+![Recommended action queue](assets/screenshots/actions.png)
+
+### Data Health
+
+![Data health dashboard](assets/screenshots/data-health.png)
+
+The `/sample-data` route is intentionally not pictured here; the same demo records can be reviewed directly in `supabase/seed/`.
+
+## Screenshots
+
+| Slot | Dashboard route | Capture |
+| --- | --- | --- |
+| Overview | `/dashboard` | KPI tiles, AI summary, urgent risks, and recent actions. |
+| Forecasts & Risks | `/forecasts-risks` | Forecast/pacing chart plus risk sections for deals, margin/expenses, and capacity. |
+| Actions | `/actions` | Action queue showing priority, owner, due date, status, and linked risk context. |
+| Data Health | `/data-health` | Import history, source table coverage, stale data warnings, and workflow/report readiness. |
+
+
+## Use Cases
 
 Small teams often track revenue, pipeline, costs, inventory, and follow-up actions in separate tools. This project shows how those signals can be brought into one operating layer so a commercial operator can answer:
 
@@ -21,7 +49,7 @@ The application favors deterministic business rules and transparent workflow log
 | Route | Purpose |
 | --- | --- |
 | `/dashboard` | KPI overview, AI report summary, urgent risks, and recent recommended actions. |
-| `/forecasts-risks` | Revenue pacing, pipeline, margin/cost, and capacity charts with risk sections for slipping deals, margin/expense pressure, and stock/capacity constraints. |
+| `/forecasts-risks` | Interactive chart switcher for revenue pacing, pipeline quality, margin/cost movement, and capacity cover, plus risk sections... |
 | `/actions` | Recommended action queue with owner, priority, status, due dates, and linked risk context. |
 | `/data-health` | Import status, source table coverage, workflow/report readiness, and freshness checks. |
 | `/sample-data` | Read-only view of the seeded source records that drive the operating pages. |
@@ -153,40 +181,7 @@ node --experimental-strip-types --test lib\formatting\currency.test.mjs
 node --experimental-strip-types --test lib\supabase\queries.test.mjs
 ```
 
-## Screenshots
 
-| Slot | Dashboard route | Capture |
-| --- | --- | --- |
-| Overview | `/dashboard` | KPI tiles, AI summary, urgent risks, and recent actions. |
-| Forecasts & Risks | `/forecasts-risks` | Forecast/pacing chart plus risk sections for deals, margin/expenses, and capacity. |
-| Actions | `/actions` | Action queue showing priority, owner, due date, status, and linked risk context. |
-| Data Health | `/data-health` | Import history, source table coverage, stale data warnings, and workflow/report readiness. |
-
-### Overview
-
-![Dashboard overview](assets/screenshots/dashboard.png)
-
-### Forecasts & Risks
-
-![Forecasts and risks dashboard](assets/screenshots/forecasts-risks.png)
-
-### Actions
-
-![Recommended action queue](assets/screenshots/actions.png)
-
-### Data Health
-
-![Data health dashboard](assets/screenshots/data-health.png)
-
-The `/sample-data` route is intentionally not pictured here; the same demo records can be reviewed directly in `supabase/seed/`.
-
-## Deployment Notes
-
-- Deploy the Next.js dashboard to Vercel or another Node-compatible host.
-- Use a hosted Supabase project seeded only with public-safe demo data.
-- Run n8n locally or in a hosted workspace for demos.
-- Keep private credentials in environment variables or n8n credentials, not in committed files.
-- Use the Supabase anon key only for read-safe demo data exposed by the public dashboard.
 
 ## Roadmap
 
